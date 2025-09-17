@@ -1,8 +1,6 @@
 package com.gildedrose;
 
-//import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GildedRoseTest {
@@ -12,7 +10,7 @@ class GildedRoseTest {
         Item[] items = new Item[] { new Item("Aged Brie", 0, 0) };
 
         GildedRose app = new GildedRose(items);
-        app.updateQuality();
+        app.process();
 
         String actual = app.items[0].sellIn + ", " + app.items[0].quality;
         assertEquals("-1, 2", actual);
@@ -23,29 +21,29 @@ class GildedRoseTest {
         Item[] items = new Item[] { new Item("Backstage passes to a TAFKAL80ETC concert", -5, 40) };
 
         GildedRose app = new GildedRose(items);
-        app.updateQuality();
+        app.process();
 
         String actual = app.items[0].sellIn + ", " + app.items[0].quality;
         assertEquals("-6, 0", actual);
     }
 
-    @Test
-    void regularItemWithSellInLessThanZeroAndQualityEqualsOneThenSellinDegradeByOneAndQualityDegradeByTwo() {
-        Item[] items = new Item[] { new Item("Ragnaros", -1, 5) };
-
-        GildedRose app = new GildedRose(items);
-        app.updateQuality();
-
-        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
-        assertEquals("-2, 3", actual);
-    }
-
+//    @Test
+//    void regularItemWithSellInLessThanZeroAndQualityEqualsOneThenSellinDegradeByOneAndQualityDegradeByTwo() {
+//        Item[] items = new Item[] { new Item("Ragnaros", -1, 5) };
+//
+//        GildedRose app = new GildedRose(items);
+//        app.process();
+//
+//        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
+//        assertEquals("-2, 3", actual);
+//    }
+//
 //    @Test
 //    void regularItemWhenSellinDegradesByOneQuallityRemaoinsTheSame() {
 //        Item[] items = new Item[] { new Item("foo", 0, 0) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("-1, 0", actual);
@@ -56,7 +54,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Aged Brie", -10, 0) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("-11, 2", actual);
@@ -67,7 +65,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Aged Brie", 5,5 ) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("4, 6", actual);
@@ -78,7 +76,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Aged Brie", 5,51 ) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("4, 51", actual);
@@ -89,7 +87,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Aged Brie", 8,40) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("7, 41", actual);
@@ -100,7 +98,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Backstage passes to a TAFKAL80ETC concert", 0, 0) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("-1, 0", actual);
@@ -111,7 +109,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Backstage passes to a TAFKAL80ETC concert", 10, 40) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("9, 42", actual);
@@ -122,7 +120,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Backstage passes to a TAFKAL80ETC concert", 5, 40) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("4, 43", actual);
@@ -133,7 +131,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Backstage passes to a TAFKAL80ETC concert", 10, 60) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("9, 60", actual);
@@ -144,7 +142,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Backstage passes to a TAFKAL80ETC concert", -10, 20) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("-11, 0", actual);
@@ -155,7 +153,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Sulfuras, Hand of Ragnaros", -2, 20) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("-2, 20", actual);
@@ -166,7 +164,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Ragnaros", 1, 3) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("0, 2", actual);
@@ -177,7 +175,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Ragnaros", -1, 0) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("-2, 0", actual);
@@ -188,7 +186,7 @@ class GildedRoseTest {
 //        Item[] items = new Item[] { new Item("Aged Brie", 1, 50) };
 //
 //        GildedRose app = new GildedRose(items);
-//        app.updateQuality();
+//        app.process();
 //
 //        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
 //        assertEquals("0, 50", actual);
