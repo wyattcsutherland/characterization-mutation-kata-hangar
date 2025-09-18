@@ -5,6 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GildedRoseTest {
 
+   @Test
+   void foo() {
+        Item[] items = new Item[] { new Item("Paisley Pajama Pants", 5, 10) };
+
+        GildedRose app = new GildedRose(items);
+        app.process();
+
+        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
+        assertEquals("0, 0", actual);
+    }
     @Test
     void agedBrieSellinDegradesByOneQualityIncreasesByTwo() {
         Item[] items = new Item[] { new Item("Aged Brie", 0, 0) };
@@ -25,6 +35,17 @@ class GildedRoseTest {
 
         String actual = app.items[0].sellIn + ", " + app.items[0].quality;
         assertEquals("-6, 0", actual);
+    }
+
+    @Test
+    void normalItem_sellIn_decreases_by_one_and_quality_decreases_by_two() {
+        Item[] items = new Item[] { new Item("Foo Butter", -5, 40) };
+
+        GildedRose app = new GildedRose(items);
+        app.process();
+
+        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
+        assertEquals("-6, 38", actual);
     }
 
 //    @Test
