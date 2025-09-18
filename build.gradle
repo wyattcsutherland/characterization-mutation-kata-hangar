@@ -1,18 +1,15 @@
 plugins {
     id 'java'
-    id 'info.solidsoft.pitest' version '1.15.0'   // or newer 1.15.x
+    id 'info.solidsoft.pitest' version '1.15.0'
 }
 
-repositories {
-    mavenCentral()
-}
+repositories { mavenCentral() }
 
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // PITest JUnit 5 plugin
+    // PIT JUnit 5 plugin
     pitest 'org.pitest:pitest-junit5-plugin:1.2.1'
 }
 
@@ -21,20 +18,27 @@ test {
 }
 
 java {
-    toolchain { languageVersion = JavaLanguageVersion.of(21) } // or 20/17 as you prefer
+    toolchain { languageVersion = JavaLanguageVersion.of(21) } // use 20 if your Gradle is 8.4
 }
 
 pitest {
-    targetClasses = ['com.gildedrose.*']   // mutate these classes
-    targetTests   = ['com.gildedrose.*']   // tests to run
-    useClasspathFile = true                // more robust classpath handing
+    targetClasses = ['com.gildedrose.*']
+    targetTests   = ['com.gildedrose.*']
+    useClasspathFile = true
 
-    testPlugin = 'junit5'                  // tell PIT to use JUnit 5
+    testPlugin = 'junit5'
     junit5PluginVersion = '1.2.1'
     outputFormats = ['HTML', 'XML', 'CSV']
 
-    // Optional niceties:
     threads = 4
     failWhenNoMutations = false
-    mutationThreshold = 0   // don’t fail CI while you’re wiring it up
+    mutationThreshold = 0
+}
+
+// Ensure order even when running pitest alone
+tasks.named("pitest") { mustRunAfter(tasks.named("test")) }
+
+// One-liner to run both
+tasks.register("verifyAll") {
+    dependsOn("test", "pitest")
 }
