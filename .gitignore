@@ -7,9 +7,12 @@ gradle-app.setting
 ### IntelliJ IDEA ###
 .idea/
 *.iml
+*.xml
 *.ipr
 *.iws
 **/out/
+# IntelliJ IDEA
+
 
 ### Eclipse ###
 .classpath
