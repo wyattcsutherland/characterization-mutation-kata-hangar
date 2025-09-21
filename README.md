@@ -1,7 +1,8 @@
 # Code Smells → Characterization & Mutation Testing → Refactoring
 
-This 3-part hands-on series takes you on a journey from **Detecting problems in code**  
-to **Protecting behavior with safety nets** and finally to **Correcting design with safe refactoring**.  
+This 3-part hands-on series takes you on a journey from **Detecting problems in code** 
+to **Protecting behavior with safety nets** and finally to **Correcting design and structure with safe 
+refactoring**—so that working in your code becomes easier, safer, and joyful to maintain. 
 Each session builds on the last, giving you confidence to work with legacy code fearlessly and effectively.
 
 ---
