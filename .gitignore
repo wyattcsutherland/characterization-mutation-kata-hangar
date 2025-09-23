@@ -33,3 +33,10 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+implementations/dotnet/**/bin
+implementations/dotnet/**/obj
+implementations/dotnet/**/TestResults
+implementations/dotnet/**/*.user
+implementations/dotnet/**/*.vs/
+implementations/dotnet/**/*.suo
