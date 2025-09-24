@@ -33,9 +33,11 @@ class GildedRose {
                 // Can't get this working in time for the release - JMR - 2024-01-26
                 // Julie can you try in time for the release?
                 // Hey John, how is a conjured supposed to work?
-//                  if (Items[i].Name != "Conjured"){
-//                      degradation = 2
-//                  }
+                // I think I've got it working. I'll leave it running...
+                // It should be fine...it's not breaking anything
+                  if (!items[i].name.equals("Conjured Mama Cakes")){
+                      items[i].quality = items[i].quality--;
+                  }
             } else {
                 if (items[i].quality < 50) {
                     items[i].quality = items[i].quality + 1;
