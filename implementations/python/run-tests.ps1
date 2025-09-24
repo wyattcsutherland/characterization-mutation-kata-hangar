@@ -51,8 +51,54 @@ if (-not (Test-Path "test_gilded_rose.py")) {
 
 Write-Host "🧪 Running Gilded Rose tests (excluding secret tests)..."
 
-# Run only the main test file, excluding secret test files
-& python -m pytest test_gilded_rose.py -v
+# Record start time
+$startTime = Get-Date
+
+# Run only the main test file with coverage, excluding secret test files
+$testOutput = & python -m pytest test_gilded_rose.py --cov=gilded_rose --cov-report=term-missing --tb=short -v 2>&1
+$testExitCode = $LASTEXITCODE
+
+# Record end time and calculate duration
+$endTime = Get-Date
+$executionTime = [math]::Round(($endTime - $startTime).TotalSeconds, 3)
+
+# Parse test results from pytest output
+$testsPassed = 0
+$testsFailed = 0
+$testsError = 0
+
+$testOutputString = $testOutput -join "`n"
+
+if ($testOutputString -match '(\d+) passed') { $testsPassed = [int]$matches[1] }
+if ($testOutputString -match '(\d+) failed') { $testsFailed = [int]$matches[1] }
+if ($testOutputString -match '(\d+) error') { $testsError = [int]$matches[1] }
+
+$testsTotal = $testsPassed + $testsFailed + $testsError
+
+# Parse coverage information
+$coveragePercent = "N/A"
+if ($testOutputString -match 'TOTAL.*?(\d+)%') {
+    $coveragePercent = $matches[1] + "%"
+}
+
+# Display failed test details if any tests failed
+if (($testsFailed -gt 0) -or ($testsError -gt 0)) {
+    Write-Host "❌ Failed Test Details:"
+    $failureLines = $testOutput | Where-Object { $_ -match "(FAILED|ERROR|AssertionError)" } | Select-Object -First 5
+    foreach ($line in $failureLines) {
+        Write-Host "   $line"
+    }
+    Write-Host ""
+}
+
+# Display test summary
+Write-Host "📊 Test Results Summary:"
+Write-Host "   • Tests Run: $testsTotal"
+Write-Host "   • Tests Passed: $testsPassed"
+Write-Host "   • Tests Failed: $($testsFailed + $testsError)"
+Write-Host "   • Code Coverage: $coveragePercent"
+Write-Host "   • Execution Time: ${executionTime}s"
+Write-Host ""
 
 # Deactivate virtual environment (if function exists)
 if (Get-Command deactivate -ErrorAction SilentlyContinue) {
