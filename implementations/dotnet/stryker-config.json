@@ -4,12 +4,11 @@
     "test-projects": [
       "Tests/Tests.csproj"
     ],
-    "mutate": [
-      "GildedRose/**/*.cs"
-    ],
     "reporters": [
       "html",
-      "console"
+      "json",
+      "markdown",
+      "progress"
     ],
     "thresholds": {
       "high": 80,

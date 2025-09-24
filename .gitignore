@@ -37,6 +37,7 @@ Thumbs.db
 implementations/dotnet/**/bin
 implementations/dotnet/**/obj
 implementations/dotnet/**/TestResults
+implementations/dotnet/StrykerOutput
 implementations/dotnet/**/*.user
 implementations/dotnet/**/*.vs/
 implementations/dotnet/**/*.suo

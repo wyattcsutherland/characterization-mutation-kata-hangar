@@ -49,8 +49,8 @@ if [ ! -d "Tests" ]; then
     exit 1
 fi
 
-# Run only the main Gilded Rose test (excluding secret tests)
-echo "🧪 Running Gilded Rose tests (excluding secret tests)..."
+# Run all Gilded Rose tests
+echo "🧪 Running Gilded Rose tests..."
 
 # Change to Tests directory and run only GildedRoseTest
 cd Tests
@@ -62,7 +62,7 @@ set +e
 START_TIME=$(date +%s.%3N)
 
 # Run tests excluding any with "Secret" in the name, capture output
-TEST_OUTPUT=$(dotnet test --filter "FullyQualifiedName~GildedRoseTest&FullyQualifiedName!~Secret" --collect:"XPlat Code Coverage" --verbosity normal --nologo 2>&1)
+TEST_OUTPUT=$(dotnet test --collect:"XPlat Code Coverage" --verbosity normal --nologo 2>&1)
 TEST_EXIT_CODE=$?
 
 # Record end time
@@ -73,26 +73,33 @@ EXECUTION_TIME=$(echo "$END_TIME - $START_TIME" | bc)
 set -e
 
 # Parse test results from output
-TESTS_RUN=$(echo "$TEST_OUTPUT" | grep -o 'Passed: [0-9]\+' | grep -o '[0-9]\+' | head -1)
+TESTS_TOTAL=$(echo "$TEST_OUTPUT" | grep -o 'Total tests: [0-9]\+' | grep -o '[0-9]\+' | head -1)
+TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -o 'Passed: [0-9]\+' | grep -o '[0-9]\+' | head -1)
 TESTS_FAILED=$(echo "$TEST_OUTPUT" | grep -o 'Failed: [0-9]\+' | grep -o '[0-9]\+' | head -1)
-TESTS_TOTAL=$(echo "$TEST_OUTPUT" | grep -o 'Total: [0-9]\+' | grep -o '[0-9]\+' | head -1)
 
 # Alternative parsing for different output formats
-if [ -z "$TESTS_RUN" ]; then
-    TESTS_RUN=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ passed' | grep -o '[0-9]\+' | head -1)
+if [ -z "$TESTS_TOTAL" ]; then
+    TESTS_TOTAL=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ test[s]*' | grep -o '[0-9]\+' | head -1)
+fi
+if [ -z "$TESTS_PASSED" ]; then
+    TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ passed' | grep -o '[0-9]\+' | head -1)
 fi
 if [ -z "$TESTS_FAILED" ]; then
     TESTS_FAILED=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ failed' | grep -o '[0-9]\+' | head -1)
 fi
-if [ -z "$TESTS_TOTAL" ]; then
-    TESTS_TOTAL=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ test[s]*' | grep -o '[0-9]\+' | head -1)
-fi
 
 # Set defaults if parsing fails
-TESTS_RUN=${TESTS_RUN:-1}
+TESTS_TOTAL=${TESTS_TOTAL:-0}
+TESTS_PASSED=${TESTS_PASSED:-0}
 TESTS_FAILED=${TESTS_FAILED:-0}
-TESTS_TOTAL=${TESTS_TOTAL:-$TESTS_RUN}
-TESTS_PASSED=$((TESTS_TOTAL - TESTS_FAILED))
+
+# Calculate if values are missing
+if [ "$TESTS_TOTAL" -eq 0 ] && [ "$TESTS_PASSED" -gt 0 ]; then
+    TESTS_TOTAL=$((TESTS_PASSED + TESTS_FAILED))
+fi
+if [ "$TESTS_PASSED" -eq 0 ] && [ "$TESTS_TOTAL" -gt 0 ]; then
+    TESTS_PASSED=$((TESTS_TOTAL - TESTS_FAILED))
+fi
 
 # Parse coverage information
 COVERAGE_PERCENT="N/A"
@@ -141,22 +148,65 @@ if [ "$RUN_MUTATION_TESTS" = true ]; then
     # Re-enable exit on error
     set -e
     
-    # Parse mutation test results
-    MUTATIONS_TESTED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ mutations tested' | head -1 | grep -o '[0-9]\+' | head -1)
-    MUTATIONS_KILLED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ killed' | head -1 | grep -o '[0-9]\+' | head -1)
-    MUTATIONS_SURVIVED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ survived' | head -1 | grep -o '[0-9]\+' | head -1)
-    MUTATIONS_TIMEOUT=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ timeout' | head -1 | grep -o '[0-9]\+' | head -1)
-    MUTATION_SCORE=$(echo "$MUTATION_OUTPUT" | grep -o 'Mutation score: [0-9.]\+%' | head -1 | grep -o '[0-9.]\+%' | head -1)
-    
-    # Alternative parsing patterns for Stryker output
-    if [ -z "$MUTATIONS_TESTED" ]; then
-        MUTATIONS_TESTED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ mutants tested' | head -1 | grep -o '[0-9]\+' | head -1)
-    fi
-    if [ -z "$MUTATION_SCORE" ]; then
-        MUTATION_SCORE=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9.]\+%' | tail -1)
+    # Parse mutation test results from JSON output (more reliable than console parsing)
+    LATEST_JSON_REPORT=""
+    if [ -d "StrykerOutput" ]; then
+        LATEST_JSON_REPORT=$(find StrykerOutput -name "mutation-report.json" -type f | sort | tail -1)
     fi
     
-    # Set defaults if parsing fails
+    if [ -n "$LATEST_JSON_REPORT" ] && [ -f "$LATEST_JSON_REPORT" ]; then
+        echo "📊 Parsing results from JSON report: $LATEST_JSON_REPORT"
+        
+        # Use jq if available, otherwise fall back to basic parsing
+        if command -v jq >/dev/null 2>&1; then
+            MUTATIONS_KILLED=$(jq -r '.files | to_entries[] | .value.mutants[] | select(.status == "Killed") | 1' "$LATEST_JSON_REPORT" 2>/dev/null | wc -l)
+            MUTATIONS_SURVIVED=$(jq -r '.files | to_entries[] | .value.mutants[] | select(.status == "Survived") | 1' "$LATEST_JSON_REPORT" 2>/dev/null | wc -l)
+            MUTATIONS_TIMEOUT=$(jq -r '.files | to_entries[] | .value.mutants[] | select(.status == "Timeout") | 1' "$LATEST_JSON_REPORT" 2>/dev/null | wc -l)
+            MUTATIONS_IGNORED=$(jq -r '.files | to_entries[] | .value.mutants[] | select(.status == "Ignored") | 1' "$LATEST_JSON_REPORT" 2>/dev/null | wc -l)
+            MUTATIONS_NOCOVERAGE=$(jq -r '.files | to_entries[] | .value.mutants[] | select(.status == "NoCoverage") | 1' "$LATEST_JSON_REPORT" 2>/dev/null | wc -l)
+            MUTATION_SCORE=$(jq -r '.thresholds.high // empty' "$LATEST_JSON_REPORT" 2>/dev/null)
+            
+            # Try to get actual mutation score from summary if available
+            if [ -z "$MUTATION_SCORE" ] || [ "$MUTATION_SCORE" = "null" ]; then
+                MUTATION_SCORE=$(jq -r '.mutationScore // empty' "$LATEST_JSON_REPORT" 2>/dev/null)
+            fi
+        else
+            # Fallback parsing without jq
+            MUTATIONS_KILLED=$(grep -o '"status":"Killed"' "$LATEST_JSON_REPORT" 2>/dev/null | wc -l)
+            MUTATIONS_SURVIVED=$(grep -o '"status":"Survived"' "$LATEST_JSON_REPORT" 2>/dev/null | wc -l)
+            MUTATIONS_TIMEOUT=$(grep -o '"status":"Timeout"' "$LATEST_JSON_REPORT" 2>/dev/null | wc -l)
+            MUTATION_SCORE=""
+        fi
+    else
+        # Fallback to console output parsing
+        echo "⚠️  JSON report not found, using console output parsing"
+        MUTATIONS_KILLED=$(echo "$MUTATION_OUTPUT" | grep 'got status Killed' | grep -o '[0-9]\+' | tail -1)
+        MUTATIONS_SURVIVED=$(echo "$MUTATION_OUTPUT" | grep 'got status Survived' | grep -o '[0-9]\+' | tail -1)
+        MUTATIONS_TIMEOUT=$(echo "$MUTATION_OUTPUT" | grep 'got status Timeout' | grep -o '[0-9]\+' | tail -1)
+        MUTATION_SCORE=$(echo "$MUTATION_OUTPUT" | grep -o 'mutation score is: [0-9.]\+%' | grep -o '[0-9.]\+' | head -1)
+    fi
+    
+    # Set defaults and calculate totals
+    MUTATIONS_KILLED=${MUTATIONS_KILLED:-0}
+    MUTATIONS_SURVIVED=${MUTATIONS_SURVIVED:-0}
+    MUTATIONS_TIMEOUT=${MUTATIONS_TIMEOUT:-0}
+    MUTATIONS_IGNORED=${MUTATIONS_IGNORED:-0}
+    MUTATIONS_NOCOVERAGE=${MUTATIONS_NOCOVERAGE:-0}
+    MUTATIONS_TESTED=$((MUTATIONS_KILLED + MUTATIONS_SURVIVED + MUTATIONS_TIMEOUT))
+    
+    # Calculate mutation score if not already set
+    if [ -z "$MUTATION_SCORE" ] || [ "$MUTATION_SCORE" = "null" ]; then
+        if [ "$MUTATIONS_TESTED" -gt 0 ]; then
+            MUTATION_SCORE=$(echo "scale=2; $MUTATIONS_KILLED * 100 / $MUTATIONS_TESTED" | bc -l 2>/dev/null || echo "0")
+            MUTATION_SCORE="${MUTATION_SCORE}%"
+        else
+            MUTATION_SCORE="N/A"
+        fi
+    elif [ -n "$MUTATION_SCORE" ] && [[ ! "$MUTATION_SCORE" =~ % ]]; then
+        MUTATION_SCORE="${MUTATION_SCORE}%"
+    fi
+    
+    # Final fallback defaults
     MUTATIONS_TESTED=${MUTATIONS_TESTED:-0}
     MUTATIONS_KILLED=${MUTATIONS_KILLED:-0}
     MUTATIONS_SURVIVED=${MUTATIONS_SURVIVED:-0}
@@ -169,6 +219,10 @@ if [ "$RUN_MUTATION_TESTS" = true ]; then
     echo "   • Mutations Killed: $MUTATIONS_KILLED"
     echo "   • Mutations Survived: $MUTATIONS_SURVIVED"
     echo "   • Mutations Timeout: $MUTATIONS_TIMEOUT"
+    if [ "$MUTATIONS_IGNORED" -gt 0 ] || [ "$MUTATIONS_NOCOVERAGE" -gt 0 ]; then
+        echo "   • Mutations Ignored: $MUTATIONS_IGNORED"
+        echo "   • Mutations No Coverage: $MUTATIONS_NOCOVERAGE"
+    fi
     echo "   • Mutation Score: $MUTATION_SCORE"
     echo "   • Mutation Test Time: ${MUTATION_EXECUTION_TIME}s"
     echo
