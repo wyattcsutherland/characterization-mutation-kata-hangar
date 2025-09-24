@@ -7,7 +7,31 @@ This is a Python implementation of the GildedRose kata, equivalent to the Java a
 - Python 3.8 or later
 - pip (Python package installer)
 
+## Quick Start
+
+### Verify environment and run basic tests:
+```bash
+# Linux/macOS/WSL
+./run-tests.sh
+
+# Windows PowerShell
+./run-tests.ps1
+```
+
+These scripts will:
+- ✅ Verify Python and virtual environment are set up
+- 🔧 Activate virtual environment
+- 🧪 Run the main Gilded Rose test (excluding secret characterization tests)
+
 ## Installation and Setup
+
+### Create virtual environment:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate     # Windows
+```
 
 ### Install dependencies:
 ```bash
@@ -21,9 +45,14 @@ pip install -e .
 
 ## Running Tests
 
-### Run all tests:
+### Run all tests (including secret tests):
 ```bash
 pytest
+```
+
+### Run only main test (excluding secret tests):
+```bash
+pytest test_gilded_rose.py
 ```
 
 ### Run with coverage:
@@ -79,10 +108,19 @@ The mutation test results will be available as HTML reports in the `html/` direc
 ## Project Structure
 
 - `gilded_rose.py` - Main module containing Item and GildedRose classes
-- `test_gilded_rose.py` - Unit tests using pytest
+- `test_gilded_rose.py` - Main unit test using pytest
+- `test_secret_test1.py` - Additional characterization tests (6 tests)
+- `test_secret_test2.py` - Additional characterization tests (6 tests) 
+- `test_secret_test3.py` - Additional characterization tests (6 tests)
 - `requirements.txt` - Python dependencies
 - `setup.py` - Package configuration
 - `mutmut.ini` - Mutation testing configuration
+- `run-tests.sh` / `run-tests.ps1` - Environment verification scripts
+
+## Test Categories
+
+- **Main Test**: `test_gilded_rose.py` - The primary failing test for characterization
+- **Secret Tests**: `test_secret_test*.py` - Comprehensive characterization test suite with 18 tests
 
 ## Notes
 

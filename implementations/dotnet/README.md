@@ -6,22 +6,43 @@ This is a C# .NET Core implementation of the GildedRose kata, equivalent to the 
 
 - .NET 8.0 SDK or later
 
+## Quick Start
+
+### Verify environment and run basic tests:
+```bash
+# Linux/macOS/WSL
+./run-tests.sh
+
+# Windows PowerShell
+./run-tests.ps1
+```
+
+These scripts will:
+- ✅ Verify .NET SDK is installed
+- 🔨 Build the projects
+- 🧪 Run the main Gilded Rose test (excluding secret characterization tests)
+
 ## Building and Testing
 
-### Build the project:
+### Build the projects:
 ```bash
 dotnet build GildedRose/GildedRose.csproj
+dotnet build Tests/Tests.csproj
 ```
 
-### Run tests:
+### Run all tests (including secret tests):
 ```bash
-dotnet test Tests/Tests.csproj
+cd Tests && dotnet test
 ```
 
-### Build and test everything:
+### Run only main tests (excluding secret tests):
 ```bash
-dotnet build
-dotnet test
+cd Tests && dotnet test --filter "FullyQualifiedName~GildedRoseTest&FullyQualifiedName!~Secret"
+```
+
+### Run tests with verbose output:
+```bash
+cd Tests && dotnet test --verbosity detailed
 ```
 
 ## Mutation Testing with Stryker.NET
@@ -82,9 +103,18 @@ The mutation test results will be available in the `StrykerOutput` directory as 
   - `Item.cs` - Item class with Name, SellIn, and Quality properties
   - `GildedRose.cs` - Main business logic for processing items
 - `Tests/` - Test project using xUnit
-  - `GildedRoseTest.cs` - Unit tests
+  - `GildedRoseTest.cs` - Main unit test
+  - `SecretTest1.cs.bak` - Additional characterization tests (18 tests total)
+  - `SecretTest2.cs.bak` - Additional characterization tests  
+  - `SecretTest3.cs.bak` - Additional characterization tests
 - `stryker-config.json` - Stryker mutation testing configuration
 - `.config/dotnet-tools.json` - Local tool manifest for Stryker
+- `run-tests.sh` / `run-tests.ps1` - Environment verification scripts
+
+## Test Categories
+
+- **Main Test**: `GildedRoseTest` - The primary failing test for characterization
+- **Secret Tests**: `SecretTest1-3` - Comprehensive characterization test suite with 18 tests
 
 ## Notes
 
