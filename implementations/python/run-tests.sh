@@ -5,16 +5,10 @@
 
 set -e  # Exit on any error
 
-echo "=== Python Gilded Rose Environment Verification ==="
-echo
-
-# Check if we're in the correct directory
 if [ ! -f "gilded_rose.py" ]; then
     echo "❌ Error: gilded_rose.py not found. Please run this script from the Python implementation directory."
     exit 1
 fi
-
-echo "✅ Found gilded_rose.py"
 
 # Check if Python is available
 if ! command -v python3 &> /dev/null; then
@@ -32,10 +26,6 @@ if [ ! -d ".venv" ]; then
     exit 1
 fi
 
-echo "✅ Virtual environment found"
-
-# Activate virtual environment
-echo "🔧 Activating virtual environment..."
 source .venv/bin/activate
 
 # Check if pytest is installed
@@ -45,40 +35,15 @@ if ! python -c "import pytest" 2>/dev/null; then
     exit 1
 fi
 
-echo "✅ pytest is available"
-
-# Verify project structure
 if [ ! -f "test_gilded_rose.py" ]; then
     echo "❌ Error: Main test file (test_gilded_rose.py) not found"
     exit 1
 fi
 
-echo "✅ Project structure verified"
-
-# Run only the main Gilded Rose test (excluding secret tests)
-echo
 echo "🧪 Running Gilded Rose tests (excluding secret tests)..."
-echo
 
 # Run only the main test file, excluding secret test files
-if python -m pytest test_gilded_rose.py -v; then
-    echo
-    echo "✅ Environment verification completed successfully!"
-    echo "✅ Main Gilded Rose test executed"
-    echo
-    echo "Note: Secret tests are excluded from this verification."
-    echo "To run all tests including secret tests, use: python -m pytest"
-else
-    echo
-    echo "⚠️  Main Gilded Rose test failed (this may be expected for characterization testing)"
-    echo "✅ Environment setup is correct - test execution completed"
-    echo
-    echo "Note: A failing test may be intentional for characterization testing."
-    echo "The important thing is that the environment can run tests."
-fi
+pytest test_gilded_rose.py -v
 
 # Deactivate virtual environment
 deactivate
-
-echo
-echo "🎉 Python environment verification complete!"
