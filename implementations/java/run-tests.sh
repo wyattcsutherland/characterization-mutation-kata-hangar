@@ -62,7 +62,7 @@ echo "🧪 Running Gilded Rose tests (excluding secret tests)..."
 echo
 
 # Run only the GildedRoseTest class, excluding SecretTest classes
-if ./gradlew test --tests "GildedRoseTest" -q; then
+if ./gradlew test --tests "GildedRoseTest" --info; then
     echo
     echo "✅ Environment verification completed successfully!"
     echo "✅ Main Gilded Rose test executed"

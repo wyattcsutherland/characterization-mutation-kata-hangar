@@ -39,9 +39,16 @@ public class GildedRose
                 // Can't get this working in time for the release - JMR - 2024-01-26
                 // Julie can you try in time for the release?
                 // Hey John, how is a conjured supposed to work?
-                //                  if (Items[i].Name != "Conjured"){
-                //                      degradation = 2
-                //                  }
+                // I think I've got it working. I'll leave it running...
+                // It should be fine...it's not breaking anything
+                if (!Items[i].Name.Equals("Conjured Mama Cakes"))
+                {
+                    // This replicates the Java bug: Items[i].Quality = Items[i].Quality--
+                    // Post-decrement returns original value, then decrements, but assignment overwrites with original
+                    int original = Items[i].Quality;
+                    Items[i].Quality--; // This simulates the decrement side effect  
+                    Items[i].Quality = original; // This simulates the assignment of original value
+                }
             }
             else
             {
