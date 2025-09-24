@@ -1,7 +1,29 @@
 # Java Gilded Rose Environment Verification Script (PowerShell)
 # This script verifies the Java environment setup and runs only the main Gilded Rose test
+# Usage: ./run-tests.ps1 [mutate]
+#   mutate - Run mutation tests in addition to regular tests
+
+param(
+    [switch]$mutate
+)
 
 $ErrorActionPreference = "Stop"
+
+# Parse command line arguments - handle both switch and positional parameters
+$runMutationTests = $false
+if ($mutate) {
+    $runMutationTests = $true
+} elseif ($args.Count -gt 0) {
+    foreach ($arg in $args) {
+        if ($arg -eq "mutate") {
+            $runMutationTests = $true
+        } else {
+            Write-Host "Unknown argument: $arg"
+            Write-Host "Usage: $($MyInvocation.MyCommand.Name) [mutate]"
+            exit 1
+        }
+    }
+}
 
 # Check if we're in the correct directory
 if (-not (Test-Path "build.gradle")) {
@@ -124,3 +146,56 @@ Write-Host "   • Tests Failed: $testsFailed"
 Write-Host "   • Code Coverage: $coveragePercent"
 Write-Host "   • Execution Time: ${executionTime}s"
 Write-Host ""
+
+# Run mutation tests if requested
+if ($runMutationTests) {
+    Write-Host "🧬 Running mutation tests..."
+    
+    # Record mutation test start time
+    $mutationStartTime = Get-Date
+    
+    # Run PITest mutation testing
+    $mutationOutput = & ./gradlew pitest --info 2>&1
+    $mutationExitCode = $LASTEXITCODE
+    
+    # Record mutation test end time and calculate duration
+    $mutationEndTime = Get-Date
+    $mutationExecutionTime = [math]::Round(($mutationEndTime - $mutationStartTime).TotalSeconds, 3)
+    
+    # Parse mutation test results
+    $mutationOutputString = $mutationOutput -join "`n"
+    $mutationsGenerated = 0
+    $mutationsKilled = 0
+    $mutationsSurvived = 0
+    $mutationCoverage = "N/A"
+    $mutationScore = "N/A"
+    
+    if ($mutationOutputString -match '(\d+) mutations generated') { $mutationsGenerated = [int]$matches[1] }
+    if ($mutationOutputString -match '(\d+) killed') { $mutationsKilled = [int]$matches[1] }
+    if ($mutationOutputString -match '(\d+) survived') { $mutationsSurvived = [int]$matches[1] }
+    if ($mutationOutputString -match '(\d+)% line coverage') { $mutationCoverage = $matches[1] + "%" }
+    if ($mutationOutputString -match '(\d+)% mutation coverage') { $mutationScore = $matches[1] + "%" }
+    
+    # Display mutation test results
+    Write-Host "🧬 Mutation Test Results Summary:"
+    Write-Host "   • Mutations Generated: $mutationsGenerated"
+    Write-Host "   • Mutations Killed: $mutationsKilled"
+    Write-Host "   • Mutations Survived: $mutationsSurvived"
+    Write-Host "   • Line Coverage: $mutationCoverage"
+    Write-Host "   • Mutation Score: $mutationScore"
+    Write-Host "   • Mutation Test Time: ${mutationExecutionTime}s"
+    Write-Host ""
+    
+    # Show mutation test report location
+    if (Test-Path "build/reports/pitest/index.html") {
+        Write-Host "📋 Mutation test report available at: build/reports/pitest/index.html"
+        Write-Host ""
+    }
+    
+    # Display survived mutations warning if any
+    if ($mutationsSurvived -gt 0) {
+        Write-Host "⚠️  Some mutations survived - consider improving test quality"
+        Write-Host "   Review the mutation test report for details on uncaught mutations"
+        Write-Host ""
+    }
+}

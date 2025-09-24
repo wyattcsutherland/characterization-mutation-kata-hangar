@@ -2,8 +2,26 @@
 
 # Java Gilded Rose Environment Verification Script
 # This script verifies the Java environment setup and runs only the main Gilded Rose test
+# Usage: ./run-tests.sh [mutate]
+#   mutate - Run mutation tests in addition to regular tests
 
 set -e  # Exit on any error
+
+# Parse command line arguments
+RUN_MUTATION_TESTS=false
+for arg in "$@"; do
+    case $arg in
+        mutate)
+            RUN_MUTATION_TESTS=true
+            shift
+            ;;
+        *)
+            echo "Unknown argument: $arg"
+            echo "Usage: $0 [mutate]"
+            exit 1
+            ;;
+    esac
+done
 
 # Check if we're in the correct directory
 if [ ! -f "build.gradle" ]; then
@@ -127,4 +145,63 @@ echo "   • Tests Failed: $TESTS_FAILED"
 echo "   • Code Coverage: $COVERAGE_PERCENT"
 echo "   • Execution Time: ${EXECUTION_TIME}s"
 echo
+
+# Run mutation tests if requested
+if [ "$RUN_MUTATION_TESTS" = true ]; then
+    echo "🧬 Running mutation tests..."
+    
+    # Record mutation test start time
+    MUTATION_START_TIME=$(date +%s.%3N)
+    
+    # Temporarily disable exit on error for mutation test execution
+    set +e
+    
+    # Run PITest mutation testing
+    MUTATION_OUTPUT=$(./gradlew pitest --info 2>&1)
+    MUTATION_EXIT_CODE=$?
+    
+    # Record mutation test end time
+    MUTATION_END_TIME=$(date +%s.%3N)
+    MUTATION_EXECUTION_TIME=$(echo "$MUTATION_END_TIME - $MUTATION_START_TIME" | bc)
+    
+    # Re-enable exit on error
+    set -e
+    
+    # Parse mutation test results
+    MUTATIONS_GENERATED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ mutations generated' | head -1 | grep -o '[0-9]\+' | head -1)
+    MUTATIONS_KILLED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ killed' | head -1 | grep -o '[0-9]\+' | head -1)
+    MUTATIONS_SURVIVED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ survived' | head -1 | grep -o '[0-9]\+' | head -1)
+    MUTATION_COVERAGE=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+% line coverage' | head -1 | grep -o '[0-9]\+%' | head -1)
+    MUTATION_SCORE=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+% mutation coverage' | head -1 | grep -o '[0-9]\+%' | head -1)
+    
+    # Set defaults if parsing fails
+    MUTATIONS_GENERATED=${MUTATIONS_GENERATED:-0}
+    MUTATIONS_KILLED=${MUTATIONS_KILLED:-0}
+    MUTATIONS_SURVIVED=${MUTATIONS_SURVIVED:-0}
+    MUTATION_COVERAGE=${MUTATION_COVERAGE:-"N/A"}
+    MUTATION_SCORE=${MUTATION_SCORE:-"N/A"}
+    
+    # Display mutation test results
+    echo "🧬 Mutation Test Results Summary:"
+    echo "   • Mutations Generated: $MUTATIONS_GENERATED"
+    echo "   • Mutations Killed: $MUTATIONS_KILLED"
+    echo "   • Mutations Survived: $MUTATIONS_SURVIVED"
+    echo "   • Line Coverage: $MUTATION_COVERAGE"
+    echo "   • Mutation Score: $MUTATION_SCORE"
+    echo "   • Mutation Test Time: ${MUTATION_EXECUTION_TIME}s"
+    echo
+    
+    # Show mutation test report location
+    if [ -f "build/reports/pitest/index.html" ]; then
+        echo "📋 Mutation test report available at: build/reports/pitest/index.html"
+        echo
+    fi
+    
+    # Display survived mutations if any
+    if [ "$MUTATIONS_SURVIVED" -gt 0 ] && [ "$MUTATIONS_SURVIVED" != "0" ]; then
+        echo "⚠️  Some mutations survived - consider improving test quality"
+        echo "   Review the mutation test report for details on uncaught mutations"
+        echo
+    fi
+fi
 
