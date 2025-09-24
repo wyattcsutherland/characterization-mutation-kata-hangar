@@ -17,10 +17,24 @@ This is a C# .NET Core implementation of the GildedRose kata, equivalent to the 
 ./run-tests.ps1
 ```
 
+### Run tests with mutation testing:
+```bash
+# Linux/macOS/WSL
+./run-tests.sh mutate
+
+# Windows PowerShell
+./run-tests.ps1 mutate
+# or
+./run-tests.ps1 -mutate
+```
+
 These scripts will:
 - ✅ Verify .NET SDK is installed
 - 🔨 Build the projects
 - 🧪 Run the main Gilded Rose test (excluding secret characterization tests)
+- 📊 Display detailed test results and code coverage
+- 🧬 Run mutation tests with Stryker.NET (when `mutate` parameter is provided)
+- 📋 Generate comprehensive mutation test reports
 
 ## Building and Testing
 
@@ -49,6 +63,22 @@ cd Tests && dotnet test --verbosity detailed
 
 This project is configured to use Stryker.NET for mutation testing.
 
+### Run mutation testing using the test scripts (Recommended):
+```bash
+# Linux/macOS/WSL
+./run-tests.sh mutate
+
+# Windows PowerShell
+./run-tests.ps1 mutate
+```
+
+This will run both regular tests and mutation tests, providing comprehensive results including:
+- Test execution summary
+- Code coverage metrics
+- Mutation test statistics (mutations tested, killed, survived, timeout)
+- Mutation score and coverage
+- Links to detailed HTML reports
+
 ### Setup Stryker.NET
 
 Stryker.NET is already configured as a local tool in this project. To set it up:
@@ -70,7 +100,7 @@ If you prefer to install Stryker globally on your system:
 dotnet tool install -g dotnet-stryker
 ```
 
-### Run mutation testing:
+### Run mutation testing directly with Stryker:
 ```bash
 dotnet stryker
 ```
@@ -109,7 +139,40 @@ The mutation test results will be available in the `StrykerOutput` directory as 
   - `SecretTest3.cs.bak` - Additional characterization tests
 - `stryker-config.json` - Stryker mutation testing configuration
 - `.config/dotnet-tools.json` - Local tool manifest for Stryker
-- `run-tests.sh` / `run-tests.ps1` - Environment verification scripts
+- `run-tests.sh` / `run-tests.ps1` - Environment verification and test execution scripts with mutation testing support
+
+## Test Script Features
+
+The `run-tests.sh` and `run-tests.ps1` scripts provide:
+
+### Standard Test Run:
+- ✅ Environment verification (.NET SDK availability)
+- 🔨 Project build verification
+- 🧪 Test execution with detailed output
+- 📊 Comprehensive results summary (tests run, passed, failed, coverage, execution time)
+- ❌ Detailed failure analysis with test method and assertion details
+
+### Mutation Testing Mode (with `mutate` parameter):
+- 🧬 Stryker.NET mutation testing execution
+- 📈 Mutation statistics (generated, killed, survived, timeout mutations)
+- 📊 Mutation score and line coverage metrics
+- 📋 HTML report generation with links
+- ⚠️ Quality warnings when mutations survive
+- ⏱️ Separate timing for regular tests and mutation tests
+
+### Usage Examples:
+```bash
+# Basic test run
+./run-tests.sh
+
+# Full test run with mutation testing
+./run-tests.sh mutate
+
+# PowerShell equivalents
+./run-tests.ps1
+./run-tests.ps1 mutate
+./run-tests.ps1 -mutate
+```
 
 ## Test Categories
 

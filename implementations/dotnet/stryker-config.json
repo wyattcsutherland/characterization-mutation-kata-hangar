@@ -11,9 +11,6 @@
       "html",
       "console"
     ],
-    "html-reporter": {
-      "open": false
-    },
     "thresholds": {
       "high": 80,
       "low": 60,
