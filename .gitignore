@@ -44,3 +44,5 @@ implementations/dotnet/**/*.suo
 implementations/python/.venv/
 implementations/python/mutants/
 implementations/python/__pycache__/
+
+.coverage

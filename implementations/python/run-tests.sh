@@ -42,8 +42,53 @@ fi
 
 echo "🧪 Running Gilded Rose tests (excluding secret tests)..."
 
-# Run only the main test file, excluding secret test files
-pytest test_gilded_rose.py -v
+# Temporarily disable exit on error for test execution
+set +e
+
+# Record start time
+START_TIME=$(date +%s.%3N)
+
+# Run only the main test file with coverage, excluding secret test files
+TEST_OUTPUT=$(pytest test_gilded_rose.py --cov=gilded_rose --cov-report=term-missing --tb=short -v 2>&1)
+TEST_EXIT_CODE=$?
+
+# Record end time
+END_TIME=$(date +%s.%3N)
+EXECUTION_TIME=$(echo "$END_TIME - $START_TIME" | bc)
+
+# Re-enable exit on error
+set -e
+
+# Parse test results from pytest output
+TESTS_PASSED=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ passed' | grep -o '[0-9]\+' | head -1)
+TESTS_FAILED=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ failed' | grep -o '[0-9]\+' | head -1)
+TESTS_ERROR=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ error' | grep -o '[0-9]\+' | head -1)
+
+# Set defaults if parsing fails
+TESTS_PASSED=${TESTS_PASSED:-0}
+TESTS_FAILED=${TESTS_FAILED:-0}
+TESTS_ERROR=${TESTS_ERROR:-0}
+TESTS_TOTAL=$((TESTS_PASSED + TESTS_FAILED + TESTS_ERROR))
+
+# Parse coverage information
+COVERAGE_PERCENT=$(echo "$TEST_OUTPUT" | grep -o 'TOTAL.*[0-9]\+%' | grep -o '[0-9]\+%' | head -1)
+COVERAGE_PERCENT=${COVERAGE_PERCENT:-"N/A"}
+
+# Display failed test details if any tests failed
+if [ $TESTS_FAILED -gt 0 ] || [ $TESTS_ERROR -gt 0 ]; then
+    echo "❌ Failed Test Details:"
+    echo "$TEST_OUTPUT" | grep -E "(FAILED|ERROR|AssertionError)" | head -5 | sed 's/^/   /'
+    echo
+fi
+
+# Display test summary
+echo "📊 Test Results Summary:"
+echo "   • Tests Run: $TESTS_TOTAL"
+echo "   • Tests Passed: $TESTS_PASSED"
+echo "   • Tests Failed: $((TESTS_FAILED + TESTS_ERROR))"
+echo "   • Code Coverage: $COVERAGE_PERCENT"
+echo "   • Execution Time: ${EXECUTION_TIME}s"
+echo
 
 # Deactivate virtual environment
 deactivate

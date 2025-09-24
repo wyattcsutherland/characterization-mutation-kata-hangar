@@ -49,9 +49,19 @@ echo "🧪 Running Gilded Rose tests..."
 # Temporarily disable exit on error for test execution
 set +e
 
-# Capture test output and exit code with detailed info
-TEST_OUTPUT=$(./gradlew test --tests "GildedRoseTest" --info 2>&1)
+# Record start time
+START_TIME=$(date +%s.%3N)
+
+# Capture test output and exit code with detailed info and coverage
+TEST_OUTPUT=$(./gradlew test --tests "GildedRoseTest" --continue --info 2>&1)
 TEST_EXIT_CODE=$?
+
+# Generate coverage report regardless of test results
+COVERAGE_OUTPUT=$(./gradlew jacocoTestReport --info 2>&1)
+
+# Record end time
+END_TIME=$(date +%s.%3N)
+EXECUTION_TIME=$(echo "$END_TIME - $START_TIME" | bc)
 
 # Re-enable exit on error
 set -e
@@ -64,6 +74,19 @@ TESTS_FAILED=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ failed' | head -1 | grep -
 TESTS_RUN=${TESTS_RUN:-1}
 TESTS_FAILED=${TESTS_FAILED:-0}
 TESTS_PASSED=$((TESTS_RUN - TESTS_FAILED))
+
+# Parse coverage information
+COVERAGE_PERCENT="N/A"
+if [ -f "build/reports/jacoco/test/html/index.html" ]; then
+    COVERAGE_PERCENT=$(grep -o 'Total[^%]*[0-9]\+%' build/reports/jacoco/test/html/index.html | grep -o '[0-9]\+%' | head -1)
+fi
+if [ -z "$COVERAGE_PERCENT" ] || [ "$COVERAGE_PERCENT" = "N/A" ]; then
+    # Try alternative parsing from XML report
+    if [ -f "build/reports/jacoco/test/jacocoTestReport.xml" ]; then
+        COVERAGE_PERCENT=$(grep -o 'type="INSTRUCTION".*covered="[0-9]*".*missed="[0-9]*"' build/reports/jacoco/test/jacocoTestReport.xml | head -1 | sed 's/.*covered="\([0-9]*\)".*missed="\([0-9]*\)".*/\1 \2/' | awk '{if($1+$2>0) printf "%.0f%%", $1*100/($1+$2); else print "0%"}')
+    fi
+fi
+COVERAGE_PERCENT=${COVERAGE_PERCENT:-"N/A"}
 
 # Display failed test details if any tests failed
 if [ $TESTS_FAILED -gt 0 ]; then
@@ -101,5 +124,7 @@ echo "📊 Test Results Summary:"
 echo "   • Tests Run: $TESTS_RUN"
 echo "   • Tests Passed: $TESTS_PASSED"
 echo "   • Tests Failed: $TESTS_FAILED"
+echo "   • Code Coverage: $COVERAGE_PERCENT"
+echo "   • Execution Time: ${EXECUTION_TIME}s"
 echo
 
