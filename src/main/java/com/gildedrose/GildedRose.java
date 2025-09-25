@@ -60,7 +60,7 @@ class GildedRose {
                     }
                 }
             }
-            // Decrease SellIn for all items, except Sulfuras
+            // Decrease SellIn for Sulfuras
             if (!items[i].name.equals("Sulfuras, Hand of Ragnaros")) {
                 items[i].sellIn = items[i].sellIn - 1;
             }
