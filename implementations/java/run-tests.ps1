@@ -79,15 +79,43 @@ $testExitCode = $LASTEXITCODE
 $endTime = Get-Date
 $executionTime = [math]::Round(($endTime - $startTime).TotalSeconds, 3)
 
-# Parse test results from output
-$testsRun = 1
-$testsFailed = 0
-$testOutputString = $testOutput -join "`n"
-
-if ($testOutputString -match '(\d+) tests? completed') { $testsRun = [int]$matches[1] }
-if ($testOutputString -match '(\d+) failed') { $testsFailed = [int]$matches[1] }
-
-$testsPassed = $testsRun - $testsFailed
+# Parse test results from XML file (more reliable than console output)
+if (Test-Path "build/test-results/test/TEST-com.gildedrose.GildedRoseTest.xml") {
+    try {
+        $xmlContent = Get-Content "build/test-results/test/TEST-com.gildedrose.GildedRoseTest.xml" -Raw -ErrorAction SilentlyContinue
+        
+        # Extract from XML: <testsuite name="..." tests="18" skipped="0" failures="0" errors="0" ...>
+        if ($xmlContent -match 'tests="(\d+)"') { $testsRun = [int]$matches[1] } else { $testsRun = 0 }
+        if ($xmlContent -match 'failures="(\d+)"') { $testsFailed = [int]$matches[1] } else { $testsFailed = 0 }
+        if ($xmlContent -match 'errors="(\d+)"') { $testsErrors = [int]$matches[1] } else { $testsErrors = 0 }
+        if ($xmlContent -match 'skipped="(\d+)"') { $testsSkipped = [int]$matches[1] } else { $testsSkipped = 0 }
+        
+        # Calculate passed tests
+        $testsTotalFailed = $testsFailed + $testsErrors
+        $testsPassed = $testsRun - $testsTotalFailed
+    } catch {
+        # Set defaults if XML parsing fails
+        $testsRun = 0
+        $testsFailed = 0
+        $testsErrors = 0
+        $testsSkipped = 0
+        $testsTotalFailed = 0
+        $testsPassed = 0
+    }
+} else {
+    # Fallback to console output parsing if XML not available
+    $testsRun = 0
+    $testsFailed = 0
+    $testsErrors = 0
+    $testsSkipped = 0
+    $testOutputString = $testOutput -join "`n"
+    
+    if ($testOutputString -match '(\d+) tests? completed') { $testsRun = [int]$matches[1] }
+    if ($testOutputString -match '(\d+) failed') { $testsFailed = [int]$matches[1] }
+    
+    $testsTotalFailed = $testsFailed
+    $testsPassed = $testsRun - $testsFailed
+}
 
 # Parse coverage information
 $coveragePercent = "N/A"
@@ -142,7 +170,10 @@ if ($testsFailed -gt 0) {
 Write-Host "📊 Test Results Summary:"
 Write-Host "   • Tests Run: $testsRun"
 Write-Host "   • Tests Passed: $testsPassed"
-Write-Host "   • Tests Failed: $testsFailed"
+Write-Host "   • Tests Failed: $testsTotalFailed"
+if ($testsSkipped -gt 0) {
+    Write-Host "   • Tests Skipped: $testsSkipped"
+}
 Write-Host "   • Code Coverage: $coveragePercent"
 Write-Host "   • Execution Time: ${executionTime}s"
 Write-Host ""
@@ -154,33 +185,100 @@ if ($runMutationTests) {
     # Record mutation test start time
     $mutationStartTime = Get-Date
     
+    # Check if mutations report exists and get timestamp before running
+    $mutationsReportBefore = $null
+    if (Test-Path "build/reports/pitest/mutations.csv") {
+        $mutationsReportBefore = (Get-Item "build/reports/pitest/mutations.csv" -ErrorAction SilentlyContinue).LastWriteTime
+    }
+    
     # Run PITest mutation testing
     $mutationOutput = & ./gradlew pitest --info 2>&1
     $mutationExitCode = $LASTEXITCODE
+    
+    # Check if mutations report was updated (indicates fresh run vs cached)
+    $pitestRunType = "cached"
+    if (Test-Path "build/reports/pitest/mutations.csv") {
+        $mutationsReportAfter = (Get-Item "build/reports/pitest/mutations.csv" -ErrorAction SilentlyContinue).LastWriteTime
+        if ($mutationsReportBefore -eq $null -or $mutationsReportAfter -gt $mutationsReportBefore) {
+            $pitestRunType = "fresh"
+        }
+    } else {
+        $pitestRunType = "fresh"
+    }
     
     # Record mutation test end time and calculate duration
     $mutationEndTime = Get-Date
     $mutationExecutionTime = [math]::Round(($mutationEndTime - $mutationStartTime).TotalSeconds, 3)
     
-    # Parse mutation test results
-    $mutationOutputString = $mutationOutput -join "`n"
-    $mutationsGenerated = 0
-    $mutationsKilled = 0
-    $mutationsSurvived = 0
-    $mutationCoverage = "N/A"
-    $mutationScore = "N/A"
-    
-    if ($mutationOutputString -match '(\d+) mutations generated') { $mutationsGenerated = [int]$matches[1] }
-    if ($mutationOutputString -match '(\d+) killed') { $mutationsKilled = [int]$matches[1] }
-    if ($mutationOutputString -match '(\d+) survived') { $mutationsSurvived = [int]$matches[1] }
-    if ($mutationOutputString -match '(\d+)% line coverage') { $mutationCoverage = $matches[1] + "%" }
-    if ($mutationOutputString -match '(\d+)% mutation coverage') { $mutationScore = $matches[1] + "%" }
+    # Parse mutation test results from CSV file (more reliable than console output)
+    if (Test-Path "build/reports/pitest/mutations.csv") {
+        try {
+            $csvContent = Get-Content "build/reports/pitest/mutations.csv" -ErrorAction SilentlyContinue
+            $mutationsGenerated = $csvContent.Count
+            $mutationsKilled = ($csvContent | Where-Object { $_ -match "KILLED" }).Count
+            $mutationsSurvived = ($csvContent | Where-Object { $_ -match "SURVIVED" }).Count
+            $mutationsTimeout = ($csvContent | Where-Object { $_ -match "TIMED_OUT" }).Count
+            $mutationsNoCoverage = ($csvContent | Where-Object { $_ -match "NO_COVERAGE" }).Count
+            
+            # Calculate mutation score if we have data
+            if ($mutationsGenerated -gt 0) {
+                $mutationScore = [math]::Round(($mutationsKilled * 100) / $mutationsGenerated, 0).ToString() + "%"
+            } else {
+                $mutationScore = "N/A"
+            }
+            
+            # Try to get line coverage from HTML report
+            $mutationCoverage = "N/A"
+            if (Test-Path "build/reports/pitest/index.html") {
+                $htmlContent = Get-Content "build/reports/pitest/index.html" -Raw -ErrorAction SilentlyContinue
+                if ($htmlContent -match 'Line Coverage.*?(\d+)%') {
+                    $mutationCoverage = $matches[1] + "%"
+                } elseif ($htmlContent -match '(\d+)% <div class="coverage_bar"') {
+                    $mutationCoverage = $matches[1] + "%"
+                }
+            }
+        } catch {
+            # Set defaults if CSV parsing fails
+            $mutationsGenerated = 0
+            $mutationsKilled = 0
+            $mutationsSurvived = 0
+            $mutationsTimeout = 0
+            $mutationsNoCoverage = 0
+            $mutationScore = "N/A"
+            $mutationCoverage = "N/A"
+        }
+    } else {
+        # Fallback to console output parsing if CSV not available
+        $mutationOutputString = $mutationOutput -join "`n"
+        $mutationsGenerated = 0
+        $mutationsKilled = 0
+        $mutationsSurvived = 0
+        $mutationsTimeout = 0
+        $mutationsNoCoverage = 0
+        $mutationCoverage = "N/A"
+        $mutationScore = "N/A"
+        
+        if ($mutationOutputString -match '(\d+) mutations generated') { $mutationsGenerated = [int]$matches[1] }
+        if ($mutationOutputString -match '(\d+) killed') { $mutationsKilled = [int]$matches[1] }
+        if ($mutationOutputString -match '(\d+) survived') { $mutationsSurvived = [int]$matches[1] }
+        if ($mutationOutputString -match '(\d+)% line coverage') { $mutationCoverage = $matches[1] + "%" }
+        if ($mutationOutputString -match '(\d+)% mutation coverage') { $mutationScore = $matches[1] + "%" }
+    }
     
     # Display mutation test results
     Write-Host "🧬 Mutation Test Results Summary:"
+    if ($pitestRunType -eq "cached") {
+        Write-Host "   • Status: Using cached results (no source changes detected)"
+    } else {
+        Write-Host "   • Status: Fresh mutation analysis completed"
+    }
     Write-Host "   • Mutations Generated: $mutationsGenerated"
     Write-Host "   • Mutations Killed: $mutationsKilled"
     Write-Host "   • Mutations Survived: $mutationsSurvived"
+    if ($mutationsTimeout -gt 0 -or $mutationsNoCoverage -gt 0) {
+        Write-Host "   • Mutations Timeout: $mutationsTimeout"
+        Write-Host "   • Mutations No Coverage: $mutationsNoCoverage"
+    }
     Write-Host "   • Line Coverage: $mutationCoverage"
     Write-Host "   • Mutation Score: $mutationScore"
     Write-Host "   • Mutation Test Time: ${mutationExecutionTime}s"

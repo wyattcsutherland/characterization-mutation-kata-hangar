@@ -84,14 +84,42 @@ EXECUTION_TIME=$(echo "$END_TIME - $START_TIME" | bc)
 # Re-enable exit on error
 set -e
 
-# Parse test results from output
-TESTS_RUN=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ tests\? completed' | head -1 | grep -o '[0-9]\+' | head -1)
-TESTS_FAILED=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ failed' | head -1 | grep -o '[0-9]\+' | head -1)
-
-# Set defaults if parsing fails
-TESTS_RUN=${TESTS_RUN:-1}
-TESTS_FAILED=${TESTS_FAILED:-0}
-TESTS_PASSED=$((TESTS_RUN - TESTS_FAILED))
+# Parse test results from XML file (more reliable than console output)
+if [ -f "build/test-results/test/TEST-com.gildedrose.GildedRoseTest.xml" ]; then
+    # Extract from XML: <testsuite name="..." tests="18" skipped="0" failures="0" errors="0" ...>
+    TESTS_RUN=$(grep -o 'tests="[0-9]\+"' build/test-results/test/TEST-com.gildedrose.GildedRoseTest.xml | grep -o '[0-9]\+' | head -1)
+    TESTS_FAILED=$(grep -o 'failures="[0-9]\+"' build/test-results/test/TEST-com.gildedrose.GildedRoseTest.xml | grep -o '[0-9]\+' | head -1)
+    TESTS_ERRORS=$(grep -o 'errors="[0-9]\+"' build/test-results/test/TEST-com.gildedrose.GildedRoseTest.xml | grep -o '[0-9]\+' | head -1)
+    TESTS_SKIPPED=$(grep -o 'skipped="[0-9]\+"' build/test-results/test/TEST-com.gildedrose.GildedRoseTest.xml | grep -o '[0-9]\+' | head -1)
+    
+    # Clean variables
+    TESTS_RUN=$(echo "$TESTS_RUN" | tr -d '\n\r' | xargs)
+    TESTS_FAILED=$(echo "$TESTS_FAILED" | tr -d '\n\r' | xargs)
+    TESTS_ERRORS=$(echo "$TESTS_ERRORS" | tr -d '\n\r' | xargs)
+    TESTS_SKIPPED=$(echo "$TESTS_SKIPPED" | tr -d '\n\r' | xargs)
+    
+    # Set defaults if parsing fails
+    TESTS_RUN=${TESTS_RUN:-0}
+    TESTS_FAILED=${TESTS_FAILED:-0}
+    TESTS_ERRORS=${TESTS_ERRORS:-0}
+    TESTS_SKIPPED=${TESTS_SKIPPED:-0}
+    
+    # Calculate passed tests
+    TESTS_TOTAL_FAILED=$((TESTS_FAILED + TESTS_ERRORS))
+    TESTS_PASSED=$((TESTS_RUN - TESTS_TOTAL_FAILED))
+else
+    # Fallback to console output parsing if XML not available
+    TESTS_RUN=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ tests\? completed' | head -1 | grep -o '[0-9]\+' | head -1)
+    TESTS_FAILED=$(echo "$TEST_OUTPUT" | grep -o '[0-9]\+ failed' | head -1 | grep -o '[0-9]\+' | head -1)
+    
+    # Set defaults if parsing fails
+    TESTS_RUN=${TESTS_RUN:-0}
+    TESTS_FAILED=${TESTS_FAILED:-0}
+    TESTS_ERRORS=0
+    TESTS_SKIPPED=0
+    TESTS_TOTAL_FAILED=$TESTS_FAILED
+    TESTS_PASSED=$((TESTS_RUN - TESTS_FAILED))
+fi
 
 # Parse coverage information
 COVERAGE_PERCENT="N/A"
@@ -141,7 +169,10 @@ fi
 echo "📊 Test Results Summary:"
 echo "   • Tests Run: $TESTS_RUN"
 echo "   • Tests Passed: $TESTS_PASSED"
-echo "   • Tests Failed: $TESTS_FAILED"
+echo "   • Tests Failed: $TESTS_TOTAL_FAILED"
+if [ "$TESTS_SKIPPED" -gt 0 ]; then
+    echo "   • Tests Skipped: $TESTS_SKIPPED"
+fi
 echo "   • Code Coverage: $COVERAGE_PERCENT"
 echo "   • Execution Time: ${EXECUTION_TIME}s"
 echo
@@ -156,9 +187,27 @@ if [ "$RUN_MUTATION_TESTS" = true ]; then
     # Temporarily disable exit on error for mutation test execution
     set +e
     
+    # Check if mutations report exists and get timestamp before running
+    MUTATIONS_REPORT_BEFORE=""
+    if [ -f "build/reports/pitest/mutations.csv" ]; then
+        MUTATIONS_REPORT_BEFORE=$(stat -c %Y "build/reports/pitest/mutations.csv" 2>/dev/null || echo "0")
+    fi
+    
     # Run PITest mutation testing
     MUTATION_OUTPUT=$(./gradlew pitest --info 2>&1)
     MUTATION_EXIT_CODE=$?
+    
+    # Check if mutations report was updated (indicates fresh run vs cached)
+    MUTATIONS_REPORT_AFTER=""
+    PITEST_RUN_TYPE="cached"
+    if [ -f "build/reports/pitest/mutations.csv" ]; then
+        MUTATIONS_REPORT_AFTER=$(stat -c %Y "build/reports/pitest/mutations.csv" 2>/dev/null || echo "0")
+        if [ "$MUTATIONS_REPORT_BEFORE" != "$MUTATIONS_REPORT_AFTER" ]; then
+            PITEST_RUN_TYPE="fresh"
+        fi
+    else
+        PITEST_RUN_TYPE="fresh"
+    fi
     
     # Record mutation test end time
     MUTATION_END_TIME=$(date +%s.%3N)
@@ -167,25 +216,79 @@ if [ "$RUN_MUTATION_TESTS" = true ]; then
     # Re-enable exit on error
     set -e
     
-    # Parse mutation test results
-    MUTATIONS_GENERATED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ mutations generated' | head -1 | grep -o '[0-9]\+' | head -1)
-    MUTATIONS_KILLED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ killed' | head -1 | grep -o '[0-9]\+' | head -1)
-    MUTATIONS_SURVIVED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ survived' | head -1 | grep -o '[0-9]\+' | head -1)
-    MUTATION_COVERAGE=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+% line coverage' | head -1 | grep -o '[0-9]\+%' | head -1)
-    MUTATION_SCORE=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+% mutation coverage' | head -1 | grep -o '[0-9]\+%' | head -1)
-    
-    # Set defaults if parsing fails
-    MUTATIONS_GENERATED=${MUTATIONS_GENERATED:-0}
-    MUTATIONS_KILLED=${MUTATIONS_KILLED:-0}
-    MUTATIONS_SURVIVED=${MUTATIONS_SURVIVED:-0}
-    MUTATION_COVERAGE=${MUTATION_COVERAGE:-"N/A"}
-    MUTATION_SCORE=${MUTATION_SCORE:-"N/A"}
+    # Parse mutation test results from CSV file (more reliable than console output)
+    if [ -f "build/reports/pitest/mutations.csv" ]; then
+        MUTATIONS_GENERATED=$(wc -l < build/reports/pitest/mutations.csv 2>/dev/null || echo "0")
+        MUTATIONS_KILLED=$(grep -c "KILLED" build/reports/pitest/mutations.csv 2>/dev/null || echo "0")
+        MUTATIONS_SURVIVED=$(grep -c "SURVIVED" build/reports/pitest/mutations.csv 2>/dev/null || echo "0")
+        MUTATIONS_TIMEOUT=$(grep -c "TIMED_OUT" build/reports/pitest/mutations.csv 2>/dev/null || echo "0")
+        MUTATIONS_NO_COVERAGE=$(grep -c "NO_COVERAGE" build/reports/pitest/mutations.csv 2>/dev/null || echo "0")
+        
+        # Clean variables of whitespace/newlines
+        MUTATIONS_GENERATED=$(echo "$MUTATIONS_GENERATED" | tr -d '\n\r' | xargs)
+        MUTATIONS_KILLED=$(echo "$MUTATIONS_KILLED" | tr -d '\n\r' | xargs)
+        MUTATIONS_SURVIVED=$(echo "$MUTATIONS_SURVIVED" | tr -d '\n\r' | xargs)
+        MUTATIONS_TIMEOUT=$(echo "$MUTATIONS_TIMEOUT" | tr -d '\n\r' | xargs)
+        MUTATIONS_NO_COVERAGE=$(echo "$MUTATIONS_NO_COVERAGE" | tr -d '\n\r' | xargs)
+        
+        # Calculate mutation score if we have data
+        if [ "$MUTATIONS_GENERATED" -gt 0 ]; then
+            MUTATION_SCORE=$(awk "BEGIN {printf \"%.0f%%\", ($MUTATIONS_KILLED * 100) / $MUTATIONS_GENERATED}")
+        else
+            MUTATION_SCORE="N/A"
+        fi
+        
+        # Try to get line coverage from HTML report
+        MUTATION_COVERAGE="N/A"
+        if [ -f "build/reports/pitest/index.html" ]; then
+            MUTATION_COVERAGE=$(grep -o 'Line Coverage.*[0-9]\+%' build/reports/pitest/index.html | head -1 | grep -o '[0-9]\+%' | head -1)
+            if [ -z "$MUTATION_COVERAGE" ]; then
+                # Try alternative HTML parsing
+                MUTATION_COVERAGE=$(grep -o '[0-9]\+% <div class="coverage_bar"' build/reports/pitest/index.html | head -1 | grep -o '[0-9]\+%' | head -1)
+            fi
+        fi
+        MUTATION_COVERAGE=${MUTATION_COVERAGE:-"N/A"}
+    else
+        # Fallback to console output parsing if CSV not available
+        MUTATIONS_GENERATED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ mutations generated' | head -1 | grep -o '[0-9]\+' | head -1)
+        MUTATIONS_KILLED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ killed' | head -1 | grep -o '[0-9]\+' | head -1)
+        MUTATIONS_SURVIVED=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+ survived' | head -1 | grep -o '[0-9]\+' | head -1)
+        MUTATIONS_TIMEOUT="0"
+        MUTATIONS_NO_COVERAGE="0"
+        MUTATION_COVERAGE=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+% line coverage' | head -1 | grep -o '[0-9]\+%' | head -1)
+        MUTATION_SCORE=$(echo "$MUTATION_OUTPUT" | grep -o '[0-9]\+% mutation coverage' | head -1 | grep -o '[0-9]\+%' | head -1)
+        
+        # Set defaults if parsing fails
+        MUTATIONS_GENERATED=${MUTATIONS_GENERATED:-0}
+        MUTATIONS_KILLED=${MUTATIONS_KILLED:-0}
+        MUTATIONS_SURVIVED=${MUTATIONS_SURVIVED:-0}
+        MUTATION_COVERAGE=${MUTATION_COVERAGE:-"N/A"}
+        MUTATION_SCORE=${MUTATION_SCORE:-"N/A"}
+    fi
     
     # Display mutation test results
     echo "🧬 Mutation Test Results Summary:"
+    if [ "$PITEST_RUN_TYPE" = "cached" ]; then
+        echo "   • Status: Using cached results (no source changes detected)"
+    else
+        echo "   • Status: Fresh mutation analysis completed"
+    fi
     echo "   • Mutations Generated: $MUTATIONS_GENERATED"
     echo "   • Mutations Killed: $MUTATIONS_KILLED"
     echo "   • Mutations Survived: $MUTATIONS_SURVIVED"
+    # Only show timeout and no-coverage if they have meaningful values
+    SHOW_EXTRA_STATS=false
+    if [ -n "$MUTATIONS_TIMEOUT" ] && [ "$MUTATIONS_TIMEOUT" -gt 0 ] 2>/dev/null; then
+        SHOW_EXTRA_STATS=true
+    fi
+    if [ -n "$MUTATIONS_NO_COVERAGE" ] && [ "$MUTATIONS_NO_COVERAGE" -gt 0 ] 2>/dev/null; then
+        SHOW_EXTRA_STATS=true
+    fi
+    
+    if [ "$SHOW_EXTRA_STATS" = true ]; then
+        echo "   • Mutations Timeout: ${MUTATIONS_TIMEOUT:-0}"
+        echo "   • Mutations No Coverage: ${MUTATIONS_NO_COVERAGE:-0}"
+    fi
     echo "   • Line Coverage: $MUTATION_COVERAGE"
     echo "   • Mutation Score: $MUTATION_SCORE"
     echo "   • Mutation Test Time: ${MUTATION_EXECUTION_TIME}s"
