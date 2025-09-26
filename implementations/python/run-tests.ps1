@@ -1,5 +1,11 @@
 # Python Gilded Rose Environment Verification Script (PowerShell)
 # This script verifies the Python environment setup and runs only the main Gilded Rose test
+# Usage: ./run-tests.ps1 [mutate]
+#   mutate - Run mutation tests in addition to regular tests
+
+param(
+    [switch]$mutate
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -99,6 +105,115 @@ Write-Host "   • Tests Failed: $($testsFailed + $testsError)"
 Write-Host "   • Code Coverage: $coveragePercent"
 Write-Host "   • Execution Time: ${executionTime}s"
 Write-Host ""
+
+# Run mutation tests if requested
+if ($mutate) {
+    Write-Host "🧬 Running mutation tests with mutmut..."
+    
+    # Record mutation test start time
+    $mutationStartTime = Get-Date
+    
+    # Check if mutmut is installed
+    try {
+        python -c "import mutmut" 2>$null
+    } catch {
+        Write-Host "❌ Error: mutmut is not installed in the virtual environment"
+        Write-Host "Please install mutmut with: pip install mutmut"
+        exit 1
+    }
+    
+    # Run mutmut mutation testing
+    $mutationOutput = & python -m mutmut run --max-children 2 2>&1
+    $mutationExitCode = $LASTEXITCODE
+    
+    # Record mutation test end time and calculate duration
+    $mutationEndTime = Get-Date
+    $mutationExecutionTime = [math]::Round(($mutationEndTime - $mutationStartTime).TotalSeconds, 3)
+    
+    # Parse mutation test results using mutmut results command for accurate counts
+    $resultsOutput = & mutmut results --all True 2>$null
+    
+    $mutationsGenerated = 0
+    $mutationsKilled = 0
+    $mutationsSurvived = 0
+    $mutationsTimeout = 0
+    $mutationsSuspicious = 0
+    $mutationsSkipped = 0
+    
+    if ($resultsOutput -and $resultsOutput.Trim()) {
+        # Count each type of result from the mutmut results output
+        $resultLines = $resultsOutput -split "`n" | Where-Object { $_.Trim() }
+        $mutationsGenerated = $resultLines.Count
+        $mutationsKilled = ($resultLines | Where-Object { $_ -match ': killed' }).Count
+        $mutationsSurvived = ($resultLines | Where-Object { $_ -match ': survived' }).Count
+        $mutationsSkipped = ($resultLines | Where-Object { $_ -match ': no tests' }).Count
+        $mutationsTimeout = ($resultLines | Where-Object { $_ -match ': timeout' }).Count
+        $mutationsSuspicious = ($resultLines | Where-Object { $_ -match ': suspicious' }).Count
+    } else {
+        # Fallback to parsing console output if mutmut results fails
+        $mutationOutputString = $mutationOutput -join "`n"
+        
+        # Extract the final summary line with pattern like "160/160  🎉 79 🫥 7  ⏰ 0  🤔 0  🙁 74  🔇 0"
+        if ($mutationOutputString -match '(\d+)/(\d+)\s+🎉\s*(\d+)\s+🫥\s*(\d+)\s+⏰\s*(\d+)\s+🤔\s*(\d+)\s+🙁\s*(\d+)') {
+            $mutationsGenerated = [int]$matches[2]
+            $mutationsKilled = [int]$matches[3]
+            $mutationsSkipped = [int]$matches[4]
+            $mutationsTimeout = [int]$matches[5]
+            $mutationsSuspicious = [int]$matches[6]
+            $mutationsSurvived = [int]$matches[7]
+        }
+    }
+    
+    # Calculate mutation score if we have data
+    $mutationScore = "N/A"
+    if ($mutationsGenerated -gt 0) {
+        $mutationScore = [math]::Round(($mutationsKilled * 100) / $mutationsGenerated, 0).ToString() + "%"
+    }
+    
+    # Calculate coverage from mutations that were tested (excluding skipped)
+    $mutationsTested = $mutationsKilled + $mutationsSurvived + $mutationsTimeout + $mutationsSuspicious
+    $mutationCoverage = "N/A"
+    if ($mutationsTested -gt 0) {
+        $mutationCoverage = [math]::Round(($mutationsTested * 100) / $mutationsGenerated, 0).ToString() + "%"
+    }
+    
+    # Display mutation test results
+    Write-Host "🧬 Mutation Test Results Summary:"
+    Write-Host "   • Mutations Generated: $mutationsGenerated"
+    Write-Host "   • Mutations Killed: $mutationsKilled"
+    Write-Host "   • Mutations Survived: $mutationsSurvived"
+    
+    # Only show additional stats if they have meaningful values
+    $showExtraStats = ($mutationsTimeout -gt 0) -or ($mutationsSuspicious -gt 0) -or ($mutationsSkipped -gt 0)
+    
+    if ($showExtraStats) {
+        if ($mutationsTimeout -gt 0) {
+            Write-Host "   • Mutations Timeout: $mutationsTimeout"
+        }
+        if ($mutationsSuspicious -gt 0) {
+            Write-Host "   • Mutations Suspicious: $mutationsSuspicious"
+        }
+        if ($mutationsSkipped -gt 0) {
+            Write-Host "   • Mutations Skipped: $mutationsSkipped"
+        }
+    }
+    Write-Host "   • Mutation Coverage: $mutationCoverage"
+    Write-Host "   • Mutation Score: $mutationScore"
+    Write-Host "   • Mutation Test Time: ${mutationExecutionTime}s"
+    Write-Host ""
+    
+    # Show how to browse results
+    Write-Host "📋 To view detailed mutation results, run: mutmut show"
+    Write-Host "📋 To view HTML report, run: mutmut html && open html/index.html"
+    Write-Host ""
+    
+    # Display survived mutations warning if any
+    if ($mutationsSurvived -gt 0) {
+        Write-Host "⚠️  Some mutations survived - consider improving test quality"
+        Write-Host "   Run 'mutmut show <id>' to see specific survived mutations"
+        Write-Host ""
+    }
+}
 
 # Deactivate virtual environment (if function exists)
 if (Get-Command deactivate -ErrorAction SilentlyContinue) {

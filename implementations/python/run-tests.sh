@@ -2,8 +2,26 @@
 
 # Python Gilded Rose Environment Verification Script
 # This script verifies the Python environment setup and runs only the main Gilded Rose test
+# Usage: ./run-tests.sh [mutate]
+#   mutate - Run mutation tests in addition to regular tests
 
 set -e  # Exit on any error
+
+# Parse command line arguments
+RUN_MUTATION_TESTS=false
+for arg in "$@"; do
+    case $arg in
+        mutate)
+            RUN_MUTATION_TESTS=true
+            shift
+            ;;
+        *)
+            echo "Unknown argument: $arg"
+            echo "Usage: $0 [mutate]"
+            exit 1
+            ;;
+    esac
+done
 
 if [ ! -f "gilded_rose.py" ]; then
     echo "❌ Error: gilded_rose.py not found. Please run this script from the Python implementation directory."
@@ -89,6 +107,133 @@ echo "   • Tests Failed: $((TESTS_FAILED + TESTS_ERROR))"
 echo "   • Code Coverage: $COVERAGE_PERCENT"
 echo "   • Execution Time: ${EXECUTION_TIME}s"
 echo
+
+# Run mutation tests if requested
+if [ "$RUN_MUTATION_TESTS" = true ]; then
+    echo "🧬 Running mutation tests with mutmut..."
+    
+    # Record mutation test start time
+    MUTATION_START_TIME=$(date +%s.%3N)
+    
+    # Temporarily disable exit on error for mutation test execution
+    set +e
+    
+    # Check if mutmut is installed
+    if ! python -c "import mutmut" 2>/dev/null; then
+        echo "❌ Error: mutmut is not installed in the virtual environment"
+        echo "Please install mutmut with: pip install mutmut"
+        exit 1
+    fi
+    
+    # Run mutmut mutation testing
+    MUTATION_OUTPUT=$(mutmut run --max-children 2 2>&1)
+    MUTATION_EXIT_CODE=$?
+    
+    # Record mutation test end time
+    MUTATION_END_TIME=$(date +%s.%3N)
+    MUTATION_EXECUTION_TIME=$(echo "$MUTATION_END_TIME - $MUTATION_START_TIME" | bc)
+    
+    # Re-enable exit on error
+    set -e
+    
+    # Parse mutation test results from mutmut output
+    # Always try to get results using mutmut results command for most accurate counts
+    RESULTS_OUTPUT=$(mutmut results --all True 2>/dev/null || echo "")
+    
+    if [ -n "$RESULTS_OUTPUT" ]; then
+        MUTATIONS_GENERATED=$(echo "$RESULTS_OUTPUT" | wc -l)
+        MUTATIONS_KILLED=$(echo "$RESULTS_OUTPUT" | grep -c ": killed" 2>/dev/null || echo "0")
+        MUTATIONS_SURVIVED=$(echo "$RESULTS_OUTPUT" | grep -c ": survived" 2>/dev/null || echo "0")
+        MUTATIONS_SKIPPED=$(echo "$RESULTS_OUTPUT" | grep -c ": no tests" 2>/dev/null || echo "0")
+        MUTATIONS_TIMEOUT=$(echo "$RESULTS_OUTPUT" | grep -c ": timeout" 2>/dev/null || echo "0")
+        MUTATIONS_SUSPICIOUS=$(echo "$RESULTS_OUTPUT" | grep -c ": suspicious" 2>/dev/null || echo "0")
+    elif [ -n "$(echo "$MUTATION_OUTPUT" | grep -E '[0-9]+/[0-9]+.*🎉.*🫥.*⏰.*🤔.*🙁')" ]; then
+        # Fallback to parsing console output summary line
+        SUMMARY_LINE=$(echo "$MUTATION_OUTPUT" | grep -E '[0-9]+/[0-9]+.*🎉.*🫥.*⏰.*🤔.*🙁' | tail -1)
+        MUTATIONS_GENERATED=$(echo "$SUMMARY_LINE" | grep -o '[0-9]\+/[0-9]\+' | cut -d'/' -f2 | head -1)
+        MUTATIONS_KILLED=$(echo "$SUMMARY_LINE" | grep -o '🎉 [0-9]\+' | grep -o '[0-9]\+' | head -1)
+        MUTATIONS_SKIPPED=$(echo "$SUMMARY_LINE" | grep -o '🫥 [0-9]\+' | grep -o '[0-9]\+' | head -1)
+        MUTATIONS_TIMEOUT=$(echo "$SUMMARY_LINE" | grep -o '⏰ [0-9]\+' | grep -o '[0-9]\+' | head -1)
+        MUTATIONS_SUSPICIOUS=$(echo "$SUMMARY_LINE" | grep -o '🤔 [0-9]\+' | grep -o '[0-9]\+' | head -1)
+        MUTATIONS_SURVIVED=$(echo "$SUMMARY_LINE" | grep -o '🙁 [0-9]\+' | grep -o '[0-9]\+' | head -1)
+    else
+        # Final fallback - set default values
+        MUTATIONS_GENERATED="0"
+        MUTATIONS_KILLED="0"
+        MUTATIONS_SURVIVED="0"
+        MUTATIONS_TIMEOUT="0"
+        MUTATIONS_SUSPICIOUS="0"
+        MUTATIONS_SKIPPED="0"
+    fi
+    
+    # Set defaults if parsing fails and clean up whitespace
+    MUTATIONS_GENERATED=$(echo "${MUTATIONS_GENERATED:-0}" | tr -d '\n\r' | xargs)
+    MUTATIONS_KILLED=$(echo "${MUTATIONS_KILLED:-0}" | tr -d '\n\r' | xargs)
+    MUTATIONS_SURVIVED=$(echo "${MUTATIONS_SURVIVED:-0}" | tr -d '\n\r' | xargs)
+    MUTATIONS_TIMEOUT=$(echo "${MUTATIONS_TIMEOUT:-0}" | tr -d '\n\r' | xargs)
+    MUTATIONS_SUSPICIOUS=$(echo "${MUTATIONS_SUSPICIOUS:-0}" | tr -d '\n\r' | xargs)
+    MUTATIONS_SKIPPED=$(echo "${MUTATIONS_SKIPPED:-0}" | tr -d '\n\r' | xargs)
+    
+    # Calculate mutation score if we have data
+    if [ "$MUTATIONS_GENERATED" -gt 0 ] && [ "$MUTATIONS_KILLED" -ge 0 ]; then
+        MUTATION_SCORE=$(awk "BEGIN {printf \"%.0f%%\", ($MUTATIONS_KILLED * 100) / $MUTATIONS_GENERATED}")
+    else
+        MUTATION_SCORE="N/A"
+    fi
+    
+    # Calculate coverage from mutations that were tested (excluding skipped)
+    MUTATIONS_TESTED=$((MUTATIONS_KILLED + MUTATIONS_SURVIVED + MUTATIONS_TIMEOUT + MUTATIONS_SUSPICIOUS))
+    if [ "$MUTATIONS_TESTED" -gt 0 ] && [ "$MUTATIONS_GENERATED" -gt 0 ]; then
+        MUTATION_COVERAGE=$(awk "BEGIN {printf \"%.0f%%\", ($MUTATIONS_TESTED * 100) / $MUTATIONS_GENERATED}")
+    else
+        MUTATION_COVERAGE="N/A"
+    fi
+    
+    # Display mutation test results
+    echo "🧬 Mutation Test Results Summary:"
+    echo "   • Mutations Generated: $MUTATIONS_GENERATED"
+    echo "   • Mutations Killed: $MUTATIONS_KILLED"
+    echo "   • Mutations Survived: $MUTATIONS_SURVIVED"
+    # Only show additional stats if they have meaningful values
+    SHOW_EXTRA_STATS=false
+    if [ "$MUTATIONS_TIMEOUT" -gt 0 ] 2>/dev/null; then
+        SHOW_EXTRA_STATS=true
+    fi
+    if [ "$MUTATIONS_SUSPICIOUS" -gt 0 ] 2>/dev/null; then
+        SHOW_EXTRA_STATS=true
+    fi
+    if [ "$MUTATIONS_SKIPPED" -gt 0 ] 2>/dev/null; then
+        SHOW_EXTRA_STATS=true
+    fi
+    
+    if [ "$SHOW_EXTRA_STATS" = true ]; then
+        if [ "$MUTATIONS_TIMEOUT" -gt 0 ] 2>/dev/null; then
+            echo "   • Mutations Timeout: $MUTATIONS_TIMEOUT"
+        fi
+        if [ "$MUTATIONS_SUSPICIOUS" -gt 0 ] 2>/dev/null; then
+            echo "   • Mutations Suspicious: $MUTATIONS_SUSPICIOUS"
+        fi
+        if [ "$MUTATIONS_SKIPPED" -gt 0 ] 2>/dev/null; then
+            echo "   • Mutations Skipped: $MUTATIONS_SKIPPED"
+        fi
+    fi
+    echo "   • Mutation Coverage: $MUTATION_COVERAGE"
+    echo "   • Mutation Score: $MUTATION_SCORE"
+    echo "   • Mutation Test Time: ${MUTATION_EXECUTION_TIME}s"
+    echo
+    
+    # Show how to browse results
+    echo "📋 To view detailed mutation results, run: mutmut show"
+    echo "📋 To view HTML report, run: mutmut html && open html/index.html"
+    echo
+    
+    # Display survived mutations warning if any
+    if [ "$MUTATIONS_SURVIVED" -gt 0 ] && [ "$MUTATIONS_SURVIVED" != "0" ]; then
+        echo "⚠️  Some mutations survived - consider improving test quality"
+        echo "   Run 'mutmut show <id>' to see specific survived mutations"
+        echo
+    fi
+fi
 
 # Deactivate virtual environment
 deactivate
