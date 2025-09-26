@@ -4,6 +4,7 @@
     "test-projects": [
       "Tests/Tests.csproj"
     ],
+    "verbosity": "error",
     "reporters": [
       "html",
       "json",

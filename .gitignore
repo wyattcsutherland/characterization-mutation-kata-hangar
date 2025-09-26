@@ -1,49 +1,13 @@
-### Gradle ###
-.gradle/
-**/build/
-!gradle/wrapper/gradle-wrapper.jar
-gradle-app.setting
-
-### IntelliJ IDEA ###
-.idea/
-*.iml
-*.xml
-*.ipr
-*.iws
-**/out/
-# IntelliJ IDEA
-
-
-### Eclipse ###
-.classpath
-.project
-.settings/
-**/bin/
-
 ### VS Code ###
 .vscode/
-
-### OS ###
 .DS_Store
 Thumbs.db
-
-### Logs & temps (optional but handy) ###
-*.log
-*.tmp
-*.swp
-*.swo
-*~
-
-implementations/dotnet/**/bin
-implementations/dotnet/**/obj
-implementations/dotnet/**/TestResults
-implementations/dotnet/StrykerOutput
-implementations/dotnet/**/*.user
-implementations/dotnet/**/*.vs/
-implementations/dotnet/**/*.suo
-
-implementations/python/.venv/
-implementations/python/mutants/
-implementations/python/__pycache__/
+bin
+obj
+**/TestResults
+StrykerOutput
+.user
+.vs/
+.suo
 
 .coverage

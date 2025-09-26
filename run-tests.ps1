@@ -18,6 +18,17 @@ try {
     exit 1
 }
 
+# Verify project structure
+if (!(Test-Path "GildedRose/GildedRose.csproj")) {
+    Write-Host "❌ Error: GildedRose.csproj not found"
+    exit 1
+}
+
+if (!(Test-Path "Tests/Tests.csproj")) {
+    Write-Host "❌ Error: Tests.csproj not found"
+    exit 1
+}
+
 # Run tests
 Write-Host "🧪 Running Gilded Rose tests..."
 Set-Location Tests
@@ -28,12 +39,20 @@ $executionTime = [math]::Round(($endTime - $startTime).TotalSeconds, 3)
 
 # Parse results
 $testOutputString = $testOutput -join "`n"
-$testsTotal = 18
-$testsPassed = if ($testOutputString -match "Passed:\s*(\d+)") { [int]$matches[1] } else { 18 }
+$testsTotal = if ($testOutputString -match "Total tests:\s*(\d+)") { [int]$matches[1] } else { 1 }
+$testsPassed = if ($testOutputString -match "Passed:\s*(\d+)") { [int]$matches[1] } else { 0 }
 $testsFailed = if ($testOutputString -match "Failed:\s*(\d+)") { [int]$matches[1] } else { 0 }
 
+# Calculate missing values
+if ($testsTotal -eq 0 -and ($testsPassed -gt 0 -or $testsFailed -gt 0)) {
+    $testsTotal = $testsPassed + $testsFailed
+}
+if ($testsPassed -eq 0 -and $testsTotal -gt 0) {
+    $testsPassed = $testsTotal - $testsFailed
+}
+
 # Coverage
-$coveragePercent = "94%"
+$coveragePercent = "N/A"
 $coverageFile = Get-ChildItem TestResults -Filter "coverage.cobertura.xml" -Recurse -EA 0 | Select-Object -First 1
 if ($coverageFile) {
     $content = Get-Content $coverageFile.FullName -Raw
@@ -50,13 +69,14 @@ Write-Host "   • Code Coverage: $coveragePercent"
 Write-Host "   • Execution Time: $($executionTime)s"
 Write-Host ""
 
+# Go back to root directory for mutation testing
 Set-Location ..
 
 # Mutation testing
 if ($runMutationTests) {
     Write-Host "🧬 Running mutation tests with Stryker..."
     $mutationStartTime = Get-Date
-    $mutationOutput = & dotnet stryker --config-file stryker-config.json 2>&1
+    & dotnet stryker --config-file stryker-config.json
     $mutationEndTime = Get-Date
     $mutationExecutionTime = [math]::Round(($mutationEndTime - $mutationStartTime).TotalSeconds, 3)
     
@@ -68,7 +88,7 @@ if ($runMutationTests) {
     $mutationsTimeout = 0
     $mutationsIgnored = 0
     $mutationsNoCoverage = 0
-    $mutationScore = "N/A"
+    $mutationScore = 0
     
     if ($latestJsonReport) {
         Write-Host "📊 Parsing results from JSON report: $($latestJsonReport.FullName)"
@@ -86,13 +106,29 @@ if ($runMutationTests) {
                 }
             }
         } catch {
-            Write-Host "⚠️  JSON parsing failed, using console output"
+            Write-Host "⚠️  JSON parsing failed"
+            $mutationsKilled = 0
+            $mutationsSurvived = 0
+            $mutationsTimeout = 0
+            $mutationScore = 0
         }
+    } else {
+        Write-Host "⚠️  JSON report not found. Unable to parse mutation results."
+        $mutationsKilled = 0
+        $mutationsSurvived = 0
+        $mutationsTimeout = 0
+        $mutationScore = 0
     }
     
     $mutationsTested = $mutationsKilled + $mutationsSurvived + $mutationsTimeout
-    if ($mutationsTested -gt 0) {
-        $mutationScore = [math]::Round(($mutationsKilled / $mutationsTested) * 100, 2).ToString() + "%"
+    if ($mutationScore -eq 0 -and $mutationsTested -gt 0) {
+        $mutationScore = [math]::Round(($mutationsKilled / $mutationsTested) * 100, 2)
+    }
+    
+    if ($mutationScore -gt 0) {
+        $mutationScoreDisplay = $mutationScore.ToString() + "%"
+    } else {
+        $mutationScoreDisplay = "N/A"
     }
     
     Write-Host "🧬 Mutation Test Results Summary:"
@@ -104,7 +140,7 @@ if ($runMutationTests) {
         Write-Host "   • Mutations Ignored: $mutationsIgnored"
         Write-Host "   • Mutations No Coverage: $mutationsNoCoverage"
     }
-    Write-Host "   • Mutation Score: $mutationScore"
+    Write-Host "   • Mutation Score: $mutationScoreDisplay"
     Write-Host "   • Mutation Test Time: $($mutationExecutionTime)s"
     Write-Host ""
     

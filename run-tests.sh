@@ -39,13 +39,13 @@ DOTNET_VERSION=$(dotnet --version)
 echo "✅ .NET found: $DOTNET_VERSION"
 
 # Verify project structure
-if [ ! -d "GildedRose" ]; then
-    echo "❌ Error: GildedRose project directory not found"
+if [ ! -f "GildedRose/GildedRose.csproj" ]; then
+    echo "❌ Error: GildedRose.csproj not found"
     exit 1
 fi
 
-if [ ! -d "Tests" ]; then
-    echo "❌ Error: Tests project directory not found"
+if [ ! -f "Tests/Tests.csproj" ]; then
+    echo "❌ Error: Tests.csproj not found"
     exit 1
 fi
 
@@ -124,7 +124,7 @@ echo "   • Code Coverage: $COVERAGE_PERCENT"
 echo "   • Execution Time: ${EXECUTION_TIME}s"
 echo
 
-# Go back to the root directory for mutation testing
+# Go back to root directory for mutation testing
 cd ..
 
 # Run mutation tests if requested
@@ -137,8 +137,8 @@ if [ "$RUN_MUTATION_TESTS" = true ]; then
     # Temporarily disable exit on error for mutation test execution
     set +e
     
-    # Run Stryker mutation testing
-    MUTATION_OUTPUT=$(dotnet stryker --config-file stryker-config.json 2>&1)
+    # Run Stryker mutation testing and wait for completion
+    dotnet stryker --config-file stryker-config.json
     MUTATION_EXIT_CODE=$?
     
     # Record mutation test end time
@@ -151,7 +151,11 @@ if [ "$RUN_MUTATION_TESTS" = true ]; then
     # Parse mutation test results from JSON output (more reliable than console parsing)
     LATEST_JSON_REPORT=""
     if [ -d "StrykerOutput" ]; then
-        LATEST_JSON_REPORT=$(find StrykerOutput -name "mutation-report.json" -type f | sort | tail -1)
+        LATEST_JSON_REPORT=$(find StrykerOutput -name "mutation-report.json" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)
+        # Fallback if printf not available
+        if [ -z "$LATEST_JSON_REPORT" ]; then
+            LATEST_JSON_REPORT=$(find StrykerOutput -name "mutation-report.json" -type f | sort | tail -1)
+        fi
     fi
     
     if [ -n "$LATEST_JSON_REPORT" ] && [ -f "$LATEST_JSON_REPORT" ]; then
@@ -178,12 +182,11 @@ if [ "$RUN_MUTATION_TESTS" = true ]; then
             MUTATION_SCORE=""
         fi
     else
-        # Fallback to console output parsing
-        echo "⚠️  JSON report not found, using console output parsing"
-        MUTATIONS_KILLED=$(echo "$MUTATION_OUTPUT" | grep 'got status Killed' | grep -o '[0-9]\+' | tail -1)
-        MUTATIONS_SURVIVED=$(echo "$MUTATION_OUTPUT" | grep 'got status Survived' | grep -o '[0-9]\+' | tail -1)
-        MUTATIONS_TIMEOUT=$(echo "$MUTATION_OUTPUT" | grep 'got status Timeout' | grep -o '[0-9]\+' | tail -1)
-        MUTATION_SCORE=$(echo "$MUTATION_OUTPUT" | grep -o 'mutation score is: [0-9.]\+%' | grep -o '[0-9.]\+' | head -1)
+        echo "⚠️  JSON report not found. Unable to parse mutation results."
+        MUTATIONS_KILLED=0
+        MUTATIONS_SURVIVED=0
+        MUTATIONS_TIMEOUT=0
+        MUTATION_SCORE=""
     fi
     
     # Set defaults and calculate totals

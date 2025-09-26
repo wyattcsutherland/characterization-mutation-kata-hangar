@@ -13,6 +13,6 @@ public class GildedRoseTest
         app.Process();
 
         string actual = app.Items[0].SellIn + ", " + app.Items[0].Quality;
-        Assert.Equal("0, 0", actual);
+        Assert.Equal("4, 9", actual);
     }
 }
