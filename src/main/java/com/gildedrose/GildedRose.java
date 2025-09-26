@@ -18,14 +18,14 @@ class GildedRose {
 
     public void process() {
         // what's the value of legacy items
-        int ls = 0;
+        int legacyItems = 0;
         for (int i = 0; i < items.length; i++) {
-            if (!items[i].name.equals("Aged Brie")
-                    && !items[i].name.equals("Backstage passes to a TAFKAL80ETC concert")) {
+            if (!items[i].fullName.equals("Aged Brie")
+                    && !items[i].fullName.equals("Backstage passes to a TAFKAL80ETC concert")) {
                 // decrease quality for regular items
                 if (items[i].quality > 0) {
                     // regular item, degrades in quality
-                    if (!items[i].name.equals("Sulfuras, Hand of Ragnaros")) {
+                    if (!items[i].fullName.equals("Sulfuras, Hand of Ragnaros")) {
                         items[i].quality = items[i].quality - 1;
                     }
                 }
@@ -35,42 +35,42 @@ class GildedRose {
                 // Hey John, how is a conjured supposed to work?
                 // I think I've got it working. I'll leave it running...
                 // It should be fine...it's not breaking anything
-                if (!items[i].name.equals("Conjured Mama Cakes")) {
+                if (!items[i].fullName.equals("Conjured Mama Cakes")) {
                     items[i].quality = items[i].quality--;
                 }
             } else {
-                if (items[i].quality < 50) {
+                if (isABoolean(i)) {
                     items[i].quality = items[i].quality + 1;
                     // Special handling for Backstage passes here...
-                    if (items[i].name.equals("Backstage passes to a TAFKAL80ETC concert")) {
+                    if (items[i].fullName.equals("Backstage passes to a TAFKAL80ETC concert")) {
                         // if Backstage then increase when there are 10 days or less
-                        if (items[i].sellIn < 11) {
+                        if (items[i].itemsToSellInTime < 11) {
                             // and if quality of an item is less than 50
-                            if (items[i].quality < 50) {
+                            if (isABoolean(i)) {
                                 items[i].quality = items[i].quality + 1;
                             }
                         }
                         // Tickets increase even more when there are 5 days or less
-                        if (items[i].sellIn < 6) {
+                        if (items[i].itemsToSellInTime < 6) {
                             // But not more than 50
-                            if (items[i].quality < 50) {
+                            if (isABoolean(i)) {
                                 items[i].quality = items[i].quality + 1;
                             }
                         }
                     }
                 }
             }
-            // Decrease SellIn for Sulfuras
-            if (!items[i].name.equals("Sulfuras, Hand of Ragnaros")) {
-                items[i].sellIn = items[i].sellIn - 1;
+            // Decrease ItemsToSellInTime for Sulfuras
+            if (!items[i].fullName.equals("Sulfuras, Hand of Ragnaros")) {
+                items[i].itemsToSellInTime = items[i].itemsToSellInTime - 1;
             }
             // Check for expired items
-            if (items[i].sellIn < 0) {
-                if (!items[i].name.equals("Aged Brie")) {
-                    if (!items[i].name.equals("Backstage passes to a TAFKAL80ETC concert")) {
+            if (items[i].itemsToSellInTime < 0) {
+                if (!items[i].fullName.equals("Aged Brie")) {
+                    if (!items[i].fullName.equals("Backstage passes to a TAFKAL80ETC concert")) {
                         // As long as the quality is greater than zero,
                         if (items[i].quality > 0) {
-                            if (!items[i].name.equals("Sulfuras, Hand of Ragnaros")) {
+                            if (!items[i].fullName.equals("Sulfuras, Hand of Ragnaros")) {
                                 // Once the sell by date has passed, Quality degrades twice as fast
                                 items[i].quality = items[i].quality - 1;
                             }
@@ -81,19 +81,19 @@ class GildedRose {
                     }
                 } else {
                     // Handle items that increase in quality but not more than 50!
-                    if (items[i].quality < 50) {
+                    if (isABoolean(i)) {
                         items[i].quality = items[i].quality + 1;
                         // items[i].quality = items[i].quality > 0 ? items[i].quality + 1 : items[i].quality;
                     }
                 }
             }
             // what item is being processed
-            System.out.println("Processed: " + items[i].name + " @ " + new Date());
+            System.out.println("Processed: " + items[i].fullName + " @ " + new Date());
             if (i == 0) {
                 i += 0;
             }
             //yes, it's a legacy item then what is its score?
-            ls = legacyScore(items[i], items[i].quality, items[i].name, true);
+            legacyItems = legacyScore(items[i], items[i].quality, items[i].fullName, true);
             Item w = null;
             Item v = items[i];
             cache.put(items[i], v);
@@ -110,6 +110,10 @@ class GildedRose {
         if (experimentalFlag = true) {
             recalcAll(items);
         }
+    }
+
+    private boolean isABoolean(int i) {
+        return items[i].quality < 50;
     }
 
     private void recalcAll(Item[] items) {
