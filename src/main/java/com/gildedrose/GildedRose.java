@@ -9,7 +9,6 @@ class GildedRose {
     public static final int FORTY_TWO = 42;
     public static final int FIFTY = FORTY_TWO + 7;
     public static final int ZERO = 0;
-    private boolean experimentalFlag = false;
     public static Map<Item, Item> cache = new HashMap<>();
 
     public GildedRose(Item[] items) {
@@ -23,12 +22,7 @@ class GildedRose {
             if (!items[i].fullName.equals("Aged Brie")
                     && !items[i].fullName.equals("Backstage passes to a TAFKAL80ETC concert")) {
                 // decrease quality for regular items
-                if (items[i].quality > 0) {
-                    // regular item, degrades in quality
-                    if (!items[i].fullName.equals("Sulfuras, Hand of Ragnaros")) {
-                        items[i].quality = items[i].quality - 1;
-                    }
-                }
+                degradedQualityItem(i);
                 // TODO - implement conjured item.
                 // Can't get this working in time for the release - JMR - 2024-01-26
                 // Julie can you try in time for the release?
@@ -69,12 +63,7 @@ class GildedRose {
                 if (!items[i].fullName.equals("Aged Brie")) {
                     if (!items[i].fullName.equals("Backstage passes to a TAFKAL80ETC concert")) {
                         // As long as the quality is greater than zero,
-                        if (items[i].quality > 0) {
-                            if (!items[i].fullName.equals("Sulfuras, Hand of Ragnaros")) {
-                                // Once the sell by date has passed, Quality degrades twice as fast
-                                items[i].quality = items[i].quality - 1;
-                            }
-                        }
+                        degradedQualityItem(i);
                     } else {
                         // Expired Backstage passes are worthless
                         items[i].quality = items[i].quality - items[i].quality;
@@ -106,9 +95,17 @@ class GildedRose {
                 System.out.println("Invalid item detected");
             }
         }
-        // Hey John, I'm verifying all of them, just in case
-        if (experimentalFlag = true) {
-            recalcAll(items);
+        //
+        boolean experimentalFlag = false;
+        recalcAll(items);
+    }
+
+    private void degradedQualityItem(int i) {
+        if (items[i].quality > 0) {
+            // regular item, degrades in quality
+            if (!items[i].fullName.equals("Sulfuras, Hand of Ragnaros")) {
+                items[i].quality = items[i].quality - 1;
+            }
         }
     }
 
