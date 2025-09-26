@@ -11,7 +11,7 @@ class SecretTest2 {
         GildedRose app = new GildedRose(items);
         app.process();
 
-        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
+        String actual = app.items[0].itemsToSellInTime + ", " + app.items[0].quality;
         assertEquals("4, 6", actual);
     }
 
@@ -22,7 +22,7 @@ class SecretTest2 {
         GildedRose app = new GildedRose(items);
         app.process();
 
-        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
+        String actual = app.items[0].itemsToSellInTime + ", " + app.items[0].quality;
         assertEquals("4, 51", actual);
     }
 
@@ -33,7 +33,7 @@ class SecretTest2 {
         GildedRose app = new GildedRose(items);
         app.process();
 
-        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
+        String actual = app.items[0].itemsToSellInTime + ", " + app.items[0].quality;
         assertEquals("7, 41", actual);
     }
 
@@ -44,7 +44,7 @@ class SecretTest2 {
         GildedRose app = new GildedRose(items);
         app.process();
 
-        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
+        String actual = app.items[0].itemsToSellInTime + ", " + app.items[0].quality;
         assertEquals("-1, 0", actual);
     }
 
@@ -55,7 +55,7 @@ class SecretTest2 {
         GildedRose app = new GildedRose(items);
         app.process();
 
-        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
+        String actual = app.items[0].itemsToSellInTime + ", " + app.items[0].quality;
         assertEquals("9, 42", actual);
     }
 
@@ -66,7 +66,7 @@ class SecretTest2 {
         GildedRose app = new GildedRose(items);
         app.process();
 
-        String actual = app.items[0].sellIn + ", " + app.items[0].quality;
+        String actual = app.items[0].itemsToSellInTime + ", " + app.items[0].quality;
         assertEquals("4, 43", actual);
     }
 
