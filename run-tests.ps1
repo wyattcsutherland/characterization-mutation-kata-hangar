@@ -9,8 +9,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if (-not (Test-Path "gilded_rose.py")) {
-    Write-Host "❌ Error: gilded_rose.py not found. Please run this script from the Python implementation directory."
+if (-not (Test-Path "src/gilded_rose.py")) {
+    Write-Host "❌ Error: src/gilded_rose.py not found. Please run this script from the Python implementation directory."
     exit 1
 }
 
@@ -50,8 +50,8 @@ try {
     exit 1
 }
 
-if (-not (Test-Path "test_gilded_rose.py")) {
-    Write-Host "❌ Error: Main test file (test_gilded_rose.py) not found"
+if (-not (Test-Path "src/test_gilded_rose.py")) {
+    Write-Host "❌ Error: Main test file (src/test_gilded_rose.py) not found"
     exit 1
 }
 
@@ -61,7 +61,9 @@ Write-Host "🧪 Running Gilded Rose tests (excluding secret tests)..."
 $startTime = Get-Date
 
 # Run only the main test file with coverage, excluding secret test files
+Push-Location src
 $testOutput = & python -m pytest test_gilded_rose.py --cov=gilded_rose --cov-report=term-missing --tb=short -v 2>&1
+Pop-Location
 $testExitCode = $LASTEXITCODE
 
 # Record end time and calculate duration
@@ -122,16 +124,20 @@ if ($mutate) {
         exit 1
     }
     
-    # Run mutmut mutation testing
-    $mutationOutput = & python -m mutmut run --max-children 2 2>&1
+    # Run mutmut mutation testing (cd to src directory to avoid src. module name issues)
+    Push-Location src
+    $mutationOutput = & mutmut run --max-children 2 2>&1
     $mutationExitCode = $LASTEXITCODE
+    Pop-Location
     
     # Record mutation test end time and calculate duration
     $mutationEndTime = Get-Date
     $mutationExecutionTime = [math]::Round(($mutationEndTime - $mutationStartTime).TotalSeconds, 3)
     
     # Parse mutation test results using mutmut results command for accurate counts
+    Push-Location src
     $resultsOutput = & mutmut results --all True 2>$null
+    Pop-Location
     
     $mutationsGenerated = 0
     $mutationsKilled = 0

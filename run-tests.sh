@@ -23,8 +23,8 @@ for arg in "$@"; do
     esac
 done
 
-if [ ! -f "gilded_rose.py" ]; then
-    echo "❌ Error: gilded_rose.py not found. Please run this script from the Python implementation directory."
+if [ ! -f "src/gilded_rose.py" ]; then
+    echo "❌ Error: src/gilded_rose.py not found. Please run this script from the Python implementation directory."
     exit 1
 fi
 
@@ -53,8 +53,8 @@ if ! python -c "import pytest" 2>/dev/null; then
     exit 1
 fi
 
-if [ ! -f "test_gilded_rose.py" ]; then
-    echo "❌ Error: Main test file (test_gilded_rose.py) not found"
+if [ ! -f "src/test_gilded_rose.py" ]; then
+    echo "❌ Error: Main test file (src/test_gilded_rose.py) not found"
     exit 1
 fi
 
@@ -67,7 +67,7 @@ set +e
 START_TIME=$(date +%s.%3N)
 
 # Run only the main test file with coverage, excluding secret test files
-TEST_OUTPUT=$(pytest test_gilded_rose.py --cov=gilded_rose --cov-report=term-missing --tb=short -v 2>&1)
+TEST_OUTPUT=$(cd src && python -m pytest test_gilded_rose.py --cov=gilded_rose --cov-report=term-missing --tb=short -v 2>&1)
 TEST_EXIT_CODE=$?
 
 # Record end time
@@ -125,9 +125,11 @@ if [ "$RUN_MUTATION_TESTS" = true ]; then
         exit 1
     fi
     
-    # Run mutmut mutation testing
+    # Run mutmut mutation testing (cd to src directory to avoid src. module name issues)
+    cd src
     MUTATION_OUTPUT=$(mutmut run --max-children 2 2>&1)
     MUTATION_EXIT_CODE=$?
+    cd ..
     
     # Record mutation test end time
     MUTATION_END_TIME=$(date +%s.%3N)
@@ -138,7 +140,9 @@ if [ "$RUN_MUTATION_TESTS" = true ]; then
     
     # Parse mutation test results from mutmut output
     # Always try to get results using mutmut results command for most accurate counts
+    cd src
     RESULTS_OUTPUT=$(mutmut results --all True 2>/dev/null || echo "")
+    cd ..
     
     if [ -n "$RESULTS_OUTPUT" ]; then
         MUTATIONS_GENERATED=$(echo "$RESULTS_OUTPUT" | wc -l)
