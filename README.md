@@ -1,9 +1,6 @@
 # Code Smells → Characterization & Mutation Testing → Refactoring
 
-This 3-part hands-on series takes you on a journey from **Detecting problems in code** 
-to **Protecting behavior with safety nets** and finally to **Correcting design and structure with safe 
-refactoring**—so that working in your code becomes easier, safer, and joyful to maintain. 
-Each session builds on the last, giving you confidence to work with legacy code fearlessly and effectively.
+This 3-part hands-on series takes you on a journey from **Detecting problems in code** to **Protecting behavior with safety nets** and finally to **Correcting design and structure with safe refactoring** so that working in your code becomes easier, safer, and joyful to maintain. Each session builds on the last, giving you confidence to work with legacy code fearlessly and effectively.
 
 ## 👃 Session #1: Code Smells (Detect)
 - **Theme:** Why does some code just feel harder to work with?  
@@ -27,12 +24,9 @@ Each session builds on the last, giving you confidence to work with legacy code 
 
 By the end, you’ll have the tools and confidence to transform messy legacy code into clean, maintainable, and joyful code.
 
-
-## 🏗️ Implementations
+## 📁 Implementations
 
 This repository contains multiple implementations of the Gilded Rose kata to practice the concepts across different technologies:
-
-### 📁 Available Implementations
 
 | Language | Location | Description |
 |----------|----------|-------------|
@@ -40,19 +34,10 @@ This repository contains multiple implementations of the Gilded Rose kata to pra
 | **Java** | [`implementations/java/`](implementations/java/) | Java implementation with Gradle, JUnit tests, and PITest mutation testing |
 | **Python** | [`implementations/python/`](implementations/python/) | Python implementation with pytest and mutation testing |
 
-### 🚀 Getting Started
-
 Each implementation includes:
 - **Test scripts**: `run-tests.sh` (Linux/macOS) and `run-tests.ps1` (PowerShell)
 - **Mutation testing**: Add `mutate` parameter to run mutation tests
 - **Code coverage**: Automatic coverage reporting
-
-**Example usage:**
-```bash
-cd implementations/java
-./run-tests.sh          # Run tests only
-./run-tests.sh mutate   # Run tests + mutation testing
-```
 
 ### 🐧 Linux Users
 
@@ -64,3 +49,7 @@ If you're on Linux and encounter permission or line ending issues with the scrip
 
 This will automatically fix line endings and make all shell scripts executable across all implementations.
 
+### 🚀 Getting Started
+
+- **[Workshop Quick Start](Workshop-Quick-Start.md)** - Get started quickly with the workshop exercises
+- **[Code Smells Guide](Code-Smells.md)** - Detailed guide to identifying and understanding code smells
