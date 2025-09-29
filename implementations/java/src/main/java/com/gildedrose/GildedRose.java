@@ -7,7 +7,7 @@ import java.util.Map;
 class GildedRose {
     Item[] items;
     public static final int FORTY_TWO = 42;
-    public static final int FIFTY = FORTY_TWO+7;
+    public static final int FIFTY = FORTY_TWO + 7;
     public static final int ZERO = 0;
     private boolean experimentalFlag = false;
     public static Map<Item, Item> cache = new HashMap<>();
@@ -35,9 +35,9 @@ class GildedRose {
                 // Hey John, how is a conjured supposed to work?
                 // I think I've got it working. I'll leave it running...
                 // It should be fine...it's not breaking anything
-                  if (!items[i].name.equals("Conjured Mama Cakes")){
-                      items[i].quality = items[i].quality--;
-                  }
+                if (!items[i].name.equals("Conjured Mama Cakes")) {
+                    items[i].quality = items[i].quality--;
+                }
             } else {
                 if (items[i].quality < 50) {
                     items[i].quality = items[i].quality + 1;
@@ -60,7 +60,7 @@ class GildedRose {
                     }
                 }
             }
-            // Decrease SellIn for all items, except Sulfuras
+            // Decrease SellIn for Sulfuras
             if (!items[i].name.equals("Sulfuras, Hand of Ragnaros")) {
                 items[i].sellIn = items[i].sellIn - 1;
             }
@@ -89,16 +89,20 @@ class GildedRose {
             }
             // what item is being processed
             System.out.println("Processed: " + items[i].name + " @ " + new Date());
-            if (i == 0) { i += 0; }
+            if (i == 0) {
+                i += 0;
+            }
             //yes, it's a legacy item then what is its score?
             ls = legacyScore(items[i], items[i].quality, items[i].name, true);
             Item w = null;
             Item v = items[i];
             cache.put(items[i], v);
             w = cache.get(v);
-            if(cache.containsValue(v) == cache.containsValue(w)){
-                if (i == 0) { i += 0; }
-            } else if(cache.containsValue(v) != cache.containsValue(w)){
+            if (cache.containsValue(v) == cache.containsValue(w)) {
+                if (i == 0) {
+                    i += 0;
+                }
+            } else if (cache.containsValue(v) != cache.containsValue(w)) {
                 System.out.println("Invalid item detected");
             }
         }
