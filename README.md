@@ -36,9 +36,9 @@ This repository contains multiple implementations of the Gilded Rose kata to pra
 
 | Language | Location | Description |
 |----------|----------|-------------|
-| **C# / .NET** | `implementations/dotnet/` | .NET implementation with xUnit tests and Stryker mutation testing |
-| **Java** | `implementations/java/` | Java implementation with Gradle, JUnit tests, and PITest mutation testing |
-| **Python** | `implementations/python/` | Python implementation with pytest and mutation testing |
+| **C# / .NET** | [`implementations/dotnet/`](implementations/dotnet/) | .NET implementation with xUnit tests and Stryker mutation testing |
+| **Java** | [`implementations/java/`](implementations/java/) | Java implementation with Gradle, JUnit tests, and PITest mutation testing |
+| **Python** | [`implementations/python/`](implementations/python/) | Python implementation with pytest and mutation testing |
 
 ### 🚀 Getting Started
 
