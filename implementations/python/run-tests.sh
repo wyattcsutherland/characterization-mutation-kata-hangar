@@ -40,8 +40,8 @@ echo "✅ Python found: $PYTHON_VERSION"
 # Check for virtual environment
 if [ ! -d ".venv" ]; then
     echo "❌ Error: Virtual environment (.venv) not found"
-    echo "Please create a virtual environment with: python3 -m venv .venv"
-    exit 1
+    echo "Creating virtual environment with: python3 -m venv .venv"
+    python3 -m venv .venv
 fi
 
 source .venv/bin/activate
@@ -49,8 +49,8 @@ source .venv/bin/activate
 # Check if pytest is installed
 if ! python -c "import pytest" 2>/dev/null; then
     echo "❌ Error: pytest is not installed in the virtual environment"
-    echo "Please install requirements with: pip install -r requirements.txt"
-    exit 1
+    echo "Installing requirements with: pip install -r requirements.txt"
+    pip install -r requirements.txt
 fi
 
 if [ ! -f "test_gilded_rose.py" ]; then

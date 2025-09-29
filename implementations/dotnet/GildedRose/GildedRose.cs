@@ -43,11 +43,9 @@ public class GildedRose
                 // It should be fine...it's not breaking anything
                 if (!Items[i].Name.Equals("Conjured Mama Cakes"))
                 {
-                    // This replicates the Java bug: Items[i].Quality = Items[i].Quality--
-                    // Post-decrement returns original value, then decrements, but assignment overwrites with original
                     int original = Items[i].Quality;
-                    Items[i].Quality--; // This simulates the decrement side effect  
-                    Items[i].Quality = original; // This simulates the assignment of original value
+                    Items[i].Quality--;
+                    Items[i].Quality = original; 
                 }
             }
             else

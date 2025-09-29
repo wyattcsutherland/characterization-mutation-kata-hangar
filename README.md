@@ -47,7 +47,10 @@ If you're on Linux and encounter permission or line ending issues with the scrip
 ./fix-shell-scripts.sh
 ```
 
-This will automatically fix line endings and make all shell scripts executable across all implementations.
+This will automatically:
+- Fix line endings and make all shell scripts executable across all implementations
+- Configure Git to preserve line endings (prevents WSL/Windows line ending issues)
+- Create/update `.gitattributes` for consistent cross-platform development
 
 ### 🚀 Getting Started
 

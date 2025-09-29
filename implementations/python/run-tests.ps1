@@ -29,25 +29,26 @@ try {
 # Check for virtual environment
 if (-not (Test-Path ".venv")) {
     Write-Host "❌ Error: Virtual environment (.venv) not found"
-    Write-Host "Please create a virtual environment with: python3 -m venv .venv"
-    exit 1
+    Write-Host "Creating virtual environment with: python3 -m venv .venv"
+    python3 -m venv .venv
 }
 
 # Activate virtual environment
 if ($IsWindows -or $env:OS -eq "Windows_NT") {
+    Write-Host "Activating virtual environment"
     & .\.venv\Scripts\Activate.ps1
 } else {
     # For PowerShell on Linux/macOS
+    Write-Host "Activating virtual environment (for PowerShell on Linux/macOS)"
     & ./.venv/bin/Activate.ps1
 }
 
 # Check if pytest is installed
-try {
-    python -c "import pytest" 2>$null
-} catch {
+$pytestCheck = python -c "import pytest" 2>&1
+if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Error: pytest is not installed in the virtual environment"
-    Write-Host "Please install requirements with: pip install -r requirements.txt"
-    exit 1
+    Write-Host "Installing requirements with: pip install -r requirements.txt"
+    pip install -r requirements.txt
 }
 
 if (-not (Test-Path "test_gilded_rose.py")) {

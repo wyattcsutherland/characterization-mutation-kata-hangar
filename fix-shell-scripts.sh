@@ -58,4 +58,46 @@ echo "📋 Summary of actions taken:"
 echo "   • Fixed line endings (converted CRLF to LF)"
 echo "   • Made all script files executable"
 echo ""
-echo "🚀 All shell scripts in the repository are now ready to run on Linux!"
+
+# Configure Git to preserve line endings
+echo "🔧 Configuring Git line ending settings..."
+git config core.autocrlf false
+echo "   ✅ Set core.autocrlf = false for this repository"
+
+# Check if .gitattributes exists and create it if needed
+if [ ! -f ".gitattributes" ]; then
+    echo "   � Creating .gitattributes file for line ending control"
+    cat > .gitattributes << 'EOF'
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Force Unix LF line endings for shell scripts
+*.sh text eol=lf
+gradlew text eol=lf
+
+# Force Windows CRLF line endings for Windows batch files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# PowerShell files - let Git decide based on content
+*.ps1 text
+
+# Ensure binary files are not modified
+*.jar binary
+*.dll binary
+*.exe binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+EOF
+    echo "   ✅ Created .gitattributes file"
+else
+    echo "   ℹ️  .gitattributes file already exists"
+fi
+
+echo ""
+echo "🚀 All shell scripts and Git settings are now ready for cross-platform development!"
+echo "💡 Tip: The .gitattributes file will ensure consistent line endings across all platforms."
