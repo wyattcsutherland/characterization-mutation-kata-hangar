@@ -26,8 +26,11 @@ gradle-app.setting
 
 ### VS Code ###
 .vscode/
-/java/.vscode/
-/dotnet/.vscode/
+java/.vscode/
+dotnet/.vscode/
+dotnet/src/GildedRose/obj/**
+dotnet/src/GildedRose.Tests/obj/**
+dotnet/src/GildedRose/bin/**
 
 
 ### OS ###
@@ -40,5 +43,5 @@ Thumbs.db
 *.swp
 *.swo
 *~
-**/obj/*
-**/bin/*
+obj/**
+bin/**
