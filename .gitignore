@@ -1,11 +1,15 @@
 ### Gradle ###
 .gradle/
+/java/.gradle/
+/java/bin/
+
 **/build/
 !gradle/wrapper/gradle-wrapper.jar
 gradle-app.setting
 
 ### IntelliJ IDEA ###
 .idea/
+/java/.idea/
 *.iml
 *.xml
 *.ipr
@@ -22,6 +26,14 @@ gradle-app.setting
 
 ### VS Code ###
 .vscode/
+java/.vscode/
+dotnet/.vscode/
+dotnet/src/GildedRose/obj/**
+dotnet/src/GildedRose.Tests/obj/**
+dotnet/src/GildedRose/bin/**
+dotnet/src/GildedRose.Tests/obj
+dotnet/src/GildedRose.Tests/obj/Debug
+
 
 ### OS ###
 .DS_Store
@@ -33,3 +45,5 @@ Thumbs.db
 *.swp
 *.swo
 *~
+obj/
+bin/
