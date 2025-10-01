@@ -31,6 +31,8 @@ dotnet/.vscode/
 dotnet/src/GildedRose/obj/**
 dotnet/src/GildedRose.Tests/obj/**
 dotnet/src/GildedRose/bin/**
+dotnet/src/GildedRose.Tests/obj
+dotnet/src/GildedRose.Tests/obj/Debug
 
 
 ### OS ###
@@ -43,5 +45,5 @@ Thumbs.db
 *.swp
 *.swo
 *~
-obj/**
-bin/**
+obj/
+bin/
